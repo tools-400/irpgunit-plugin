@@ -3,7 +3,7 @@
 //  Empty Unit Test Case. Prints a protocol of the execution flow.
 //=====================================================================
 //  Command to create the service program:
-//  RUCRTRPG TSTPGM(RPGUNIT/TEMPLATE) SRCFILE(RPGUNIT/QSRC)
+//  RUCRTRPG TSTPGM(RPGUNIT/RPGSQL) SRCFILE(RPGUNIT/QTEMPLATE)
 //=====================================================================
 //  Tools/400 STRPREPRC instructions:
 //   >>PRE-COMPILER<<
