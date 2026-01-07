@@ -1,7 +1,7 @@
 /* =================================================================== */
-/*  iRPGUnit SelfTest - Build JSONWTRT.                                */
+/*  iRPGUnit SelfTest - Build XMLSTMFT.                                */
 /* =================================================================== */
-/* Copyright (c) 2013-2025 iRPGUnit Project Team                       */
+/* Copyright (c) 2013-2019 iRPGUnit Project Team                       */
 /* All rights reserved. This program and the accompanying materials    */
 /* are made available under the terms of the Common Public License v1.0*/
 /* which accompanies this distribution, and is available at            */
@@ -10,14 +10,14 @@
 /*  Usage:                                                             */
 /*  a) Add the iRPGUnit library to your library list.                  */
 /*  b) Start the Rexx script with the following command:               */
-/*       STRREXPRC SRCMBR(MKCMDRUNT) SRCFILE(QUNITTEST) PARM(prdLib)   */
+/*       STRREXPRC SRCMBR(MKXMLSTMFT) SRCFILE(QUNITTEST) PARM(prdLib)  */
 /*     where 'prdLib' is the library containing the RPGUnit            */
 /*     source files.                                                   */
 /*                                                                     */
 /*     Script parameters:                                              */
 /*       prdLib   - Name of the iRPGUnit product library.              */
 /*       dbgView  - The possible values are:                           */
-/*                  ALL     : Default. Generates all debug views when  */
+/*                  LIST    : Default. Generates *LIST debug view when */
 /*                            compiling the objects.                   */
 /*                  NONE    : Compiles the obejcts without debug       */
 /*                            views.                                   */
@@ -33,7 +33,7 @@
 /*   >>PRE-COMPILER<<                                                  */
 /*     >>CRTCMD<<  STRREXPRC SRCMBR(&SM) SRCFILE(&SL/&SF);             */
 /*     >>IMPORTANT<<                                                   */
-/*       >>PARM<< PARM('&LI');                                         */
+/*       >>PARM<< PARM('&LI *LIST');                                   */
 /*     >>END-IMPORTANT<<                                               */
 /*     >>EXECUTE<<                                                     */
 /*   >>END-PRE-COMPILER<<                                              */
@@ -47,7 +47,7 @@
  SIGNAL on SYNTAX
 
  /* The utility that is installed */
- UTILITY = 'JSONWTRT'
+ UTILITY = 'XMLSTMFT'
 
  PARSE ARG prdLib dbgView tgtrls
 
@@ -59,13 +59,13 @@
    "SNDPGMMSG ",
      "MSGID(CPF9898) ",
      "MSGF(QCPFMSG) ",
-     "MSGDTA('Usage: STRREXPRC SRCMBR(MKCMDRUNT) SRCFILE(QUNITTEST) PARM(prdLib)')",
+     "MSGDTA('Usage: STRREXPRC SRCMBR(MKXMLSTMFT) SRCFILE(QUNITTEST) PARM(prdLib)')",
      "TOPGMQ(*PRV (*CTLBDY)) ",
      "MSGTYPE(*ESCAPE)"
  end
 
  select
- when (dbgView = '' | dbgView = 'ALL' | dbgView = '*ALL') then dbgView = '*ALL'
+ when (dbgView = '' | dbgView = 'ALL' | dbgView = '*ALL') then dbgView = '*LIST'
  when (dbgView = 'STMT' | dbgView = '*STMT') then dbgView = '*STMT'
  when (dbgView = 'SOURCE' | dbgView = '*SOURCE') then dbgView = '*SOURCE'
  when (dbgView = 'LIST' | dbgView = '*LIST') then dbgView = '*LIST'
@@ -88,26 +88,22 @@
  end
 
  /* -------------------------------------------- */
+ /*  Recreate the modules if needed.             */
+ /* -------------------------------------------- */
+
+ "STRREXPRC SRCMBR(A_INSTALL) SRCFILE(RPGUNITDVP/QBUILD) PARM('CMPMOD "prdLib" "dbgView" "tgtRls"')"
+
+ /* -------------------------------------------- */
  /*  Let's do it!                                */
  /* -------------------------------------------- */
- "STRREXPRC SRCMBR(MKLLIST) SRCFILE("prdLib"/QLLIST) PARM('"prdLib" "dbgView" "tgtRls"')"
 
- "CMPMOD MODULE("prdLib"/JSONWTRT ) SRCFILE("prdLib"/QUNITTEST) DBGVIEW("dbgView") TGTRLS("tgtRls")"
- "CMPMOD MODULE("prdLib"/JOBLOG   ) SRCFILE("prdLib"/QSRC     ) DBGVIEW("dbgView") TGTRLS("tgtRls")"
- "CMPMOD MODULE("prdLib"/JSONWTR  ) SRCFILE("prdLib"/QSRC     ) DBGVIEW("dbgView") TGTRLS("tgtRls")"
- "CMPMOD MODULE("prdLib"/PGMMSG   ) SRCFILE("prdLib"/QSRC     ) DBGVIEW("dbgView") TGTRLS("tgtRls")"
- "CMPMOD MODULE("prdLib"/STRING   ) SRCFILE("prdLib"/QSRC     ) DBGVIEW("dbgView") TGTRLS("tgtRls")"
+ "CMPMOD MODULE("prdLib"/XMLSTMFT ) SRCFILE("prdLib"/QUNITTEST) DBGVIEW("dbgView") TGTRLS("tgtRls")"
 
- "CRTSRVPGM  SRVPGM("prdLib"/JSONWTRT)",
-            "MODULE("prdLib"/JSONWTRT",
-                     prdLib"/JOBLOG ",
-                     prdLib"/JSONWTR",
-                     prdLib"/PGMMSG ",
-                     prdLib"/STRING   ) ",
+ "CRTSRVPGM  SRVPGM("prdLib"/XMLSTMFT) ",
+            "MODULE("prdLib"/XMLSTMFT) ",
             "EXPORT(*ALL) ",
-            "OPTION(*DUPPROC) ",
-            "BNDSRVPGM("prdLib"/RUTESTCASE) ",
-            "TEXT('RPGUnit SelfTest - Test JSONWTR.')"
+            "BNDDIR("prdLib"/IRPGUNIT) ",
+            "TEXT('RPGUnit SelfTest - Test ASSERT.')"
 
  "SNDPGMMSG ",
    "MSGID(CPF9897) ",
