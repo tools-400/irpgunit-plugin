@@ -99,6 +99,7 @@
  executeUnitTest('MKEXTPRCT', 'EXTPRCT')
  executeUnitTest('MKEXTTSTT', 'EXTTSTT')
  executeUnitTest('MKJOBLOGT', 'JOBLOGT')
+ executeUnitTest('MKJOBLOGT2', 'JOBLOGT2')
  executeUnitTest('MKLIBLT', 'LIBLT')
  executeUnitTest('MKLSTSPLFT', 'LSTSPLFT')
  executeUnitTest('MKMSGQT', 'MSGQT')
