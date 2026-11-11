@@ -1,4 +1,4 @@
-# iRPGUnit
+# iRPGUnit Plug-in
 
 Unit Testing for RPG Developers on IBM i.
 
