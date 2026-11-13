@@ -49,6 +49,8 @@ Ensure you have the following libraries in your Ant build path:
 3.3 Run target 'createGitHubFiles' of file 'build.xml'.
 3.4 Run target 'uploadGitHubFiles' of file 'build.xml'.
 3.5 Check-in source code.
-3.6 Create version tag, e.g.: v002.004.001.r
+3.6 Push this repository first, then the pages repository 'irpgunit'.
+    The GitHub workflows tag the version and publish the GitHub
+    release. Do not create tags by hand.
 
 See also: build.xml
