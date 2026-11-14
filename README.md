@@ -40,11 +40,23 @@ PTFs SI70942 and SI70936 are required for compiling test suites from UTF-8 (Ccsi
 * Displays Unit Test reports in an editor.
 * Opens failed test programs with a simple mouse click.
 
+## Installation
+
+1. Select **Help > Install New Software...** in RDi.
+2. Enter the update site `https://tools-400.github.io/irpgunit/update-site/eclipse/rdi8.0/` and select the features of iRPGUnit.
+3. Finish the wizard and restart RDi.
+
+Then install the RPGUnit library on the IBM i, see [Installation](https://tools-400.github.io/irpgunit/help/html/installation/installation.html) in the help.
+
+## Usage
+
+How to use iRPGUnit is described in the [help](https://tools-400.github.io/irpgunit/help/). It is part of the plug-in as well: **Help > Help Contents > iRPGUnit** in RDi.
+
 ## Credits
 
 The iRPGUnit plug-in uses a fork of the [RPGUnit](https://sourceforge.net/projects/rpgunit/) library, which was started by Lacton back in September 2006.
 
-Some bugs have been fixed and Mihael Schmidt at [RPG Next Gen](http://www.rpgnextgen.com/http://www.rpgnextgen.com/) added an interface to the IBM Rational Developer for i and started developing the iRPGUnit plug-in. I took over the project and widely enhanced the plug-in. Now the project is supported by Mihael and me.
+Some bugs have been fixed and Mihael Schmidt at [RPG Next Gen](http://www.rpgnextgen.com/) added an interface to the IBM Rational Developer for i and started developing the iRPGUnit plug-in. I took over the project and widely enhanced the plug-in. Now the project is supported by Mihael and me.
 
 ## Liability
 
