@@ -875,6 +875,12 @@
              MONMSG     MSGID(CPF3288)
 
              CHGPFM     FILE(&TARGETLIB/QSYSINC) +
+                          MBR(QCDRCMDD) +
+                          SRCTYPE(RPGLE) +
+                          TEXT('Retrieve Command Definition (QCDRCMDD) API')
+             MONMSG     MSGID(CPF3288)
+
+             CHGPFM     FILE(&TARGETLIB/QSYSINC) +
                           MBR(QCLRPGMI) +
                           SRCTYPE(RPGLE) +
                           TEXT('Retrieve Program Information (QCLRPGMI) API.')

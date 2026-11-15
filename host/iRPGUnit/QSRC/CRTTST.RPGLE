@@ -41,8 +41,10 @@ ctl-opt nomain;
 /include qinclude,OSVERSION
 /include qinclude,PGMMSG
 /include qinclude,ERRORCODE
+/include qinclude,MEMMGR
 
 /include qsysinc,QCAPCMD
+/include qsysinc,QCDRCMDD
 /include qsysinc,STAT
 
 
@@ -869,15 +871,15 @@ dcl-proc getCrtRpgModCmd export;
 
     if (isStmf(srcStmf));
       // Check, if parameter CVTCCSID is present (release level/PTF status)
-      if (haveCvtCcsidParam());
+      if (haveCvtCcsidParam('CRTSQLRPGI'));
         cmd += serializeCvtCcsid(tgtCcsid: srcCcsid);
       else;
         if (srcCcsid = 1208);
           sndEscapeMsgAboveCtlBdy(
             'Stream file with CCSID 1208 cannot be compiled, +
             because command CRTSQLRPGI does not support +
-            parameter CVTCCSID. Install missing PTFs and +
-            try again.');
+            parameter CVTCCSID. Install ' + getCvtCcsidPtfs() +
+            ' and try again.');
         endif;
       endif;
     endif;
@@ -988,15 +990,15 @@ dcl-proc getCrtCblModCmd export;
 
     if (isStmf(srcStmf));
       // Check, if parameter CVTCCSID is present (release level/PTF status)
-      if (haveCvtCcsidParam());
+      if (haveCvtCcsidParam('CRTSQLCBLI'));
         cmd += serializeCvtCcsid(tgtCcsid: srcCcsid);
       else;
         if (srcCcsid = 1208);
           sndEscapeMsgAboveCtlBdy(
             'Stream file with CCSID 1208 cannot be compiled, +
             because command CRTSQLCBLI does not support +
-            parameter CVTCCSID. Install missing PTFs and +
-            try again.');
+            parameter CVTCCSID. Install ' + getCvtCcsidPtfs() +
+            ' and try again.');
         endif;
       endif;
     endif;
@@ -1357,41 +1359,73 @@ dcl-proc serializeArbitraryParams;
 end-proc;
 
 
+///
+// Returns *on, if the command, that is found in the library list, supports
+// parameter CVTCCSID. On 7.3 and 7.4 the parameter is added by the PTFs of
+// the SQL pre-compiler (see getCvtCcsidPtfs()). The command definition is
+// checked instead of the PTFs, because the PTFs may have been replaced by
+// later PTFs, that were loaded instead of them.
+///
 dcl-proc haveCvtCcsidParam;
   dcl-pi *n ind extproc(*dclcase);
+    command char(10) const;
   end-pi;
 
-  dcl-s osVersion char(6);
-  dcl-s ptfLoadedStatus char(1);
+  dcl-ds dest0100 likeds(dest0100_t) inz;
+  dcl-ds apiinfo likeds(cmdd0100_t) inz;
+  dcl-ds cmdd0100 likeds(cmdd0100_t) based(pCmdd0100);
+  dcl-s rcvVar char(16000000) based(pCmdd0100);
+  dcl-s cdml char(16000000) ccsid(*utf8) based(pCdml);
+  dcl-s cdmlLen int(10);
+  dcl-s kwdCvtCcsid varchar(16) ccsid(*utf8) inz('Kwd="CVTCCSID"');
+  dcl-ds errCode likeds(errorCode_t) inz(*likeds);
+  dcl-s isParm ind;
 
-  osVersion = OS_getVersion();
-
-  // Check PTF loaded status:
-  // 2 = applied
-  // 3 = permanently applied
-  // 6 = superseeded
-  select;
-  when (osVersion = 'V7R3M0');
-    ptfLoadedStatus = OS_getPTFLoadedStatus('SI70935': '5770SS1');
-    if (ptfLoadedStatus = '2' or ptfLoadedStatus = '3' or ptfLoadedStatus = '6');
-      ptfLoadedStatus = OS_getPTFLoadedStatus('SI70937': '5770ST1');
-    endif;
-
-  when (osVersion = 'V7R4M0');
-    ptfLoadedStatus = OS_getPTFLoadedStatus('SI70941': '5770SS1');
-    if (ptfLoadedStatus = '2' or ptfLoadedStatus = '3' or ptfLoadedStatus = '6');
-      ptfLoadedStatus = OS_getPTFLoadedStatus('SI70943': '5770ST1');
-    endif;
-
-  other;
-    ptfLoadedStatus = '3'; // permanently applied, 7.5 and higher
-  endsl;
-
-  if (ptfLoadedStatus = '2' or ptfLoadedStatus = '3' or ptfLoadedStatus = '6');
-    return *on;
+  dest0100.lenRcvVar = %size(apiinfo);
+  QCDRCMDD(command + '*LIBL': dest0100: 'DEST0100': apiinfo: 'CMDD0100': errCode);
+  if (errCode.bytAvl > 0);
+    return *off;
   endif;
 
-  return *off;
+  pCmdd0100 = MemMgr_alloc(apiinfo.bytAvl: 'pCmdd0100');
+
+  dest0100.lenRcvVar = apiinfo.bytAvl;
+  QCDRCMDD(command + '*LIBL': dest0100: 'DEST0100': rcvVar: 'CMDD0100': errCode);
+  if (errCode.bytAvl > 0);
+    MemMgr_dealloc(pCmdd0100: 'pCmdd0100');
+    return *off;
+  endif;
+
+  // The CDML is returned in UTF-8: <Parm Kwd="CVTCCSID" ...>
+  pCdml = pCmdd0100 + %size(cmdd0100);
+  cdmlLen = apiinfo.bytAvl - %size(cmdd0100);
+  if (cmdd0100.bytRet < cdmlLen);
+    cdmlLen = cmdd0100.bytRet;
+  endif;
+  isParm = (%scan(kwdCvtCcsid: %subst(cdml: 1: cdmlLen)) > 0);
+
+  MemMgr_dealloc(pCmdd0100: 'pCmdd0100');
+
+  return isParm;
+
+end-proc;
+
+///
+// Returns the PTFs of the SQL pre-compiler, that add parameter CVTCCSID to
+// the commands CRTSQLRPGI and CRTSQLCBLI on 7.3 and 7.4.
+///
+dcl-proc getCvtCcsidPtfs;
+  dcl-pi *n varchar(64) extproc(*dclcase);
+  end-pi;
+
+  select;
+  when (OS_getVersion() = 'V7R3M0');
+    return 'PTFs SI70935, SI70936 and SI70937';
+  when (OS_getVersion() = 'V7R4M0');
+    return 'PTFs SI70941, SI70942 and SI70943';
+  other;
+    return 'missing PTFs';
+  endsl;
 
 end-proc;
 

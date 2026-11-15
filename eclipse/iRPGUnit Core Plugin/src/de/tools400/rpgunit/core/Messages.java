@@ -231,6 +231,7 @@ public class Messages extends NLS {
     public static String Could_not_execute_program_A_Reason_B;
     public static String PTF_information_1;
     public static String PTF_information_2;
+    public static String PTF_information_3;
     public static String Could_not_rename_member_C_to_D_in_file_A_B;
     public static String Could_not_change_source_type_of_member_C_in_file_A_B;
     public static String Failed_calling_B_INSTALL_in_library_A;

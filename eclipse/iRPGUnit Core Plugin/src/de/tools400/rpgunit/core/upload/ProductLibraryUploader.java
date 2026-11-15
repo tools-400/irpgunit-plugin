@@ -25,13 +25,16 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 
 import com.ibm.as400.access.AS400;
+import com.ibm.as400.access.AS400Exception;
 import com.ibm.as400.access.AS400FTP;
 import com.ibm.as400.access.AS400Message;
+import com.ibm.as400.access.Command;
 import com.ibm.as400.access.CommandCall;
 import com.ibm.as400.access.FTP;
 import com.ibm.as400.access.IFSFile;
 import com.ibm.as400.access.Job;
 import com.ibm.as400.access.JobLog;
+import com.ibm.as400.access.ObjectDoesNotExistException;
 import com.ibm.as400.access.QueuedMessage;
 import com.ibm.etools.iseries.subsystems.qsys.api.IBMiConnection;
 
@@ -169,6 +172,7 @@ public class ProductLibraryUploader {
 
                                         if (isUploadedFine) {
                                             setStatus(Messages.bind(Messages.Successfully_restored_iRPGUnit_library, libraryName));
+                                            showUtf8PtfInformation();
                                         }
 
                                     } catch (Exception e) {
@@ -601,12 +605,10 @@ public class ProductLibraryUploader {
                 }
 
                 //@formatter:off
-                String sqlStatement = 
-                    "SELECT PTF_IDENTIFIER, PTF_LOADED_STATUS FROM QSYS2.PTF_INFO " +
-                       "WHERE PTF_IDENTIFIER IN (" + buffer.toString() + ") AND (" + 
-                             "PTF_LOADED_STATUS = 'APPLIED' OR " + 
-                             "PTF_LOADED_STATUS = 'PERMANENTLY_APPLIED' OR " + 
-                             "PTF_LOADED_STATUS = 'SUPERSEEDED')";
+                String sqlStatement =
+                    "SELECT DISTINCT PTF_IDENTIFIER FROM QSYS2.PTF_INFO " +
+                       "WHERE PTF_IDENTIFIER IN (" + buffer.toString() + ") AND " +
+                             "PTF_LOADED_STATUS IN ('APPLIED', 'PERMANENTLY APPLIED', 'SUPERSEDED')";
                 //@formatter:on
 
                 preparedStatementSelect = jdbcConnection.prepareStatement(sqlStatement, ResultSet.TYPE_SCROLL_INSENSITIVE,
@@ -640,11 +642,77 @@ public class ProductLibraryUploader {
             setError(Messages.bind(Messages.Could_not_get_PTF_status_Reason_A, e.getLocalizedMessage()), e);
         }
 
-        if (count > ptfs.length) {
+        if (count == ptfs.length) {
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Informs the user, that test suites with embedded SQL cannot be compiled
+     * from UTF-8 (CCSID 1208) source stream files, because command CRTSQLRPGI
+     * does not support parameter CVTCCSID. That is the case on 7.3 and 7.4
+     * without the PTFs of the SQL pre-compiler. The command is checked instead
+     * of the PTFs, because the PTFs may have been replaced by later PTFs. A
+     * failing check is logged, but does not fail the installation.
+     */
+    private void showUtf8PtfInformation() {
+
+        try {
+
+            String currentOS400Release = OS400Helper.getRelease(as400);
+
+            String[] ptfs;
+            if (OS400Release.V7R4M0.compareTo(currentOS400Release) == 0) {
+                ptfs = new String[] { "SI70941 (5770SS1)", "SI70942 (5770ST1)", "SI70943 (5770ST1)" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            } else if (OS400Release.V7R3M0.compareTo(currentOS400Release) == 0) {
+                ptfs = new String[] { "SI70935 (5770SS1)", "SI70936 (5770ST1)", "SI70937 (5770ST1)" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            } else {
+                return;
+            }
+
+            if (hasCommandParameter("/QSYS.LIB/CRTSQLRPGI.CMD", "CVTCCSID")) { //$NON-NLS-1$ //$NON-NLS-2$
+                return;
+            }
+
+            StringBuilder ptfList = new StringBuilder();
+            for (String ptf : ptfs) {
+                ptfList.append(Messages.bind(Messages.PTF_information_2, ptf));
+            }
+
+            MessageDialog.openInformation(shell, "", //$NON-NLS-1$
+                Messages.bind(Messages.PTF_information_3, OS400Helper.getReleaseShort(as400), ptfList.toString()));
+
+        } catch (Exception e) {
+            setError(Messages.bind(Messages.Could_not_get_PTF_status_Reason_A, e.getLocalizedMessage()), e);
+        }
+    }
+
+    /**
+     * Returns <code>true</code>, if the command has the parameter. Also returns
+     * <code>true</code>, if the command definition cannot be retrieved, e.g.
+     * because the SQL development kit is not installed, so that no hint is
+     * shown.
+     */
+    private boolean hasCommandParameter(String commandPath, String keyword) {
+
+        try {
+            String cdml = new Command(as400, commandPath).getXML();
+            return cdml.indexOf("Kwd=\"" + keyword + "\"") >= 0; //$NON-NLS-1$ //$NON-NLS-2$
+        } catch (ObjectDoesNotExistException e) {
+            return true;
+        } catch (AS400Exception e) {
+            AS400Message message = e.getAS400Message();
+            if (message != null && "CPF9801".equals(message.getID())) { //$NON-NLS-1$
+                return true;
+            }
+            setError(Messages.bind(Messages.Could_not_get_PTF_status_Reason_A, e.getLocalizedMessage()), e);
+            return true;
+        } catch (Exception e) {
+            setError(Messages.bind(Messages.Could_not_get_PTF_status_Reason_A, e.getLocalizedMessage()), e);
+            return true;
+        }
     }
 
     private boolean checkFile(AS400 system, String library, String fileName) {
