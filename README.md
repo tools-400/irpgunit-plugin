@@ -61,3 +61,7 @@ Some bugs have been fixed and Mihael Schmidt at [RPG Next Gen](http://www.rpgnex
 ## Liability
 
 This software is free and provided without warranty. You use it at your own risk: test it with non-critical data first, and back up your data before you use it. The [license](LICENSE) applies in addition.
+
+## See Also
+
+* [iRPGUnit Update Site](https://github.com/tools-400/irpgunit)
