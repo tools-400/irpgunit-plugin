@@ -34,11 +34,14 @@ The SQL Precompile PTFs are required for compiling test suites from UTF-8 (Ccsid
 
 ## Features
 
+* Test suites in source members or in UTF-8 stream files.
+* Assertions for the common data types, e.g. assertEqual().
 * Executes iRPGUnit test suites (service programs) from RDi
 * Executes iRPGUnit test cases (procedures) from RDi
 * Displays Unit Test results in a view.
 * Displays Unit Test reports in an editor.
 * Opens failed test programs with a simple mouse click.
+* Test reports as XML files for Jenkins or VS Code.
 
 ## Installation
 
