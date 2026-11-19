@@ -38,16 +38,6 @@ ctl-opt NoMain;
 //   TYPE TEMPLATES
 //----------------------------------------------------------------------
 
-dcl-ds hReader_t qualified template;
-  length     int(5);
-  isPrepared ind;
-  fldSlcSize int(10);
-  msgQ       varchar(10);
-  currMsgCnt int(10);
-  data       char(1024);
-  fieldSelect likeds(fldSelect_QGYOLJBL_t) overlay(data);
-end-ds;
-
 dcl-ds hMsgInfo_t qualified template;
   pMsgInfo    pointer;
 end-ds;
@@ -59,16 +49,16 @@ dcl-c FIELD_SIZE 4;
 //----------------------------------------------------------------------
 
 dcl-pr hasField ind extproc(*dclcase);
-  i_hReader likeds(hReader_t);
+  i_hReader likeds(hJobLogReader_t);
   i_fieldId int(10) const;
 end-pr;
 
 dcl-pr prepareRead ind extproc(*dclcase);
-  io_hReader  like(hJobLogReader_t);
+  io_hReader  likeds(hJobLogReader_t);
 end-pr;
 
 dcl-pr setMsgQName ind extproc(*dclcase);
-  io_hReader likeds(hReader_t);
+  io_hReader likeds(hJobLogReader_t);
 end-pr;
 
 dcl-pr getExtMsgType char(10) extproc(*dclcase);
@@ -85,23 +75,20 @@ end-pr;
 //  job log reader handle on succeess, else ''.
 //----------------------------------------------------------------------
 dcl-proc JobLogReader_init export;
-  dcl-pi *n like(hJobLogReader_t);
+  dcl-pi *n likeds(hJobLogReader_t);
     i_direction  varchar(10) const;
     i_msgQ       varchar(10) const options(*nopass);
   end-pi;
 
   dcl-s msgQ like(i_msgQ);
 
-  dcl-s hReaderRtn like(hJobLogReader_t);
-  dcl-ds hReader likeds(hReader_t) based(pHReaderDS);
+  dcl-ds hReader likeds(hJobLogReader_t);
 
   if (%parms() >= %parmnum(i_msgQ));
     msgQ = i_msgQ;
   else;
     msgQ = JL_RD_MSG_ALL;
   endif;
-
-  pHReaderDS = %addr(hReaderRtn);
 
   clear hReader;
   hReader.fieldSelect.listDirection = i_direction;
@@ -125,10 +112,8 @@ dcl-proc JobLogReader_init export;
   hReader.fldSlcSize = 0;
   hReader.msgQ = msgQ;
   hReader.currMsgCnt = 0;
-  hReader.length = %addr(hReader.fieldSelect) - %addr(hReader)
-                   +  %size(hReader.fieldSelect);
 
-  return hReaderRtn;
+  return hReader;
 
 end-proc;
 
@@ -139,11 +124,11 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc JobLogReader_addField export;
   dcl-pi *n int(10);
-    io_hReader    like(hJobLogReader_t);
+    io_hReader    likeds(hJobLogReader_t);
     i_fieldId     int(10) const;
   end-pi;
 
-  dcl-ds hReader likeds(hReader_t) based(pHReader);
+  dcl-ds hReader likeds(hJobLogReader_t) based(pHReader);
   dcl-s  fieldID int(10) based(pFieldID);
 
   pHReader = %addr(io_hReader);
@@ -166,8 +151,6 @@ dcl-proc JobLogReader_addField export;
 
   hReader.fieldSelect.callMsgQNmOffs = hReader.fieldSelect.fldIdOffs +
                                        (FIELD_SIZE * hReader.fieldSelect.fldCnt);
-
-  hReader.length += FIELD_SIZE;
 
   // Message text
   if (i_fieldId = OLJL_MSG or
@@ -194,14 +177,14 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc JobLogReader_read export;
   dcl-pi *n ind;
-    io_hReader   like(hJobLogReader_t);
+    io_hReader   likeds(hJobLogReader_t);
     i_callback   pointer(*proc) const;
     i_pUserData  pointer options(*nopass) const;
   end-pi;
 
   dcl-s pUserData like(i_pUserData);
 
-  dcl-ds hReader likeds(hReader_t) based(pHReader);
+  dcl-ds hReader likeds(hJobLogReader_t) based(pHReader);
 
   dcl-s pCallback pointer(*proc);
   dcl-pr callback ind extproc(pCallback);
@@ -308,13 +291,10 @@ dcl-proc JobLogReader_getMsg export;
     i_fieldId16  int(10) options(*nopass) const;
   end-pi;
 
-  dcl-s hReader like(hJobLogReader_t);
-  dcl-ds hReaderDs likeds(hReader_t) based(pHReaderDS);
-
-  pHReaderDS = %addr(hReader);
+  dcl-ds hReader likeds(hJobLogReader_t);
 
   hReader = JobLogReader_init(JL_RD_NEXT);
-  hReaderDs.fieldSelect.startMsgKey = i_msgKey;
+  hReader.fieldSelect.startMsgKey = i_msgKey;
 
   if (%parms() >= %parmnum(i_fieldId01));
     JobLogReader_addField(hReader: i_fieldId01);
@@ -520,7 +500,7 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc hasField;
   dcl-pi *n ind;
-    i_hReader likeds(hReader_t);
+    i_hReader likeds(hJobLogReader_t);
     i_fieldId int(10) const;
   end-pi;
 
@@ -544,10 +524,10 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc prepareRead;
   dcl-pi *n ind;
-    io_hReader  like(hJobLogReader_t);
+    io_hReader  likeds(hJobLogReader_t);
   end-pi;
 
-  dcl-ds hReader likeds(hReader_t) based(pHReader);
+  dcl-ds hReader likeds(hJobLogReader_t) based(pHReader);
 
   pHReader = %addr(io_hReader);
 
@@ -578,7 +558,7 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc setMsgQName;
   dcl-pi *n ind;
-    io_hReader likeds(hReader_t);
+    io_hReader likeds(hJobLogReader_t);
   end-pi;
 
   dcl-s msgQName char(10) based(p_msgQName);
@@ -591,8 +571,6 @@ dcl-proc setMsgQName;
 
   %subst(msgQName: 1: %len(io_hReader.msgQ)) = io_hReader.msgQ;
   io_hReader.fieldSelect.callMsgqNmLen = %len(io_hReader.msgQ);
-
-  io_hReader.length += %len(io_hReader.msgQ);
 
   return *on;
 

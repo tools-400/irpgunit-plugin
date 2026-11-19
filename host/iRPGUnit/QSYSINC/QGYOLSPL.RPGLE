@@ -1,4 +1,8 @@
 **FREE
+/if defined(qgyolspl)
+/eof
+/endif
+/define qgyolspl
 //
 // Prototype for QGYOLSPL API.
 //

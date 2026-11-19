@@ -57,7 +57,7 @@ dcl-proc testJobLogNext export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hReader like(hJobLogReader_t);
+  dcl-ds hReader likeds(hJobLogReader_t);
   dcl-s i int(10);
 
   hReader = JobLogReader_init(JL_RD_PREVIOUS);

@@ -544,7 +544,9 @@ dcl-proc getLatestEscMsg export;
     intValue   int(10);
   end-ds;
 
-  dcl-s rawMsgBuf char(1024);
+  // Big enough for replacement data, message, message help and sender
+  // information, like the buffer of rcvPgmMsg().
+  dcl-s rawMsgBuf char(32767);
   dcl-ds rcvm0300 likeds(rcvm0300hdr) based(pRcvm0300);
   dcl-s pRcvm0300 pointer inz(%addr(rawMsgBuf));
   dcl-ds senderInfo likeds(rcvm0300sender) based(senderinfo_p);

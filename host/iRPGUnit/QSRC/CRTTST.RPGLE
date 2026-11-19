@@ -64,6 +64,13 @@ dcl-ds jobLogUserData_t qualified template;
   modules   likeds(objectArray_t) inz;
 end-ds;
 
+// Names of the compile listings deleted by DLTSPLF(*YES):
+// test program + modules (objectArray_t)
+dcl-ds dltSplfUserData_t qualified template;
+  numNames  int(10);
+  name      char(10) dim(52);
+end-ds;
+
 
 //----------------------------------------------------------------------
 //   GLOBAL VARIABLES
@@ -107,8 +114,7 @@ dcl-proc crtTst export;
   dcl-s srcType varchar(10);
   dcl-s textRslv like(text) inz;
   dcl-s i int(10);
-  dcl-s mbrtype char(10);
-  dcl-ds tmpopts likeds(options_t) inz;
+  dcl-s isEventF ind inz(*off);
   dcl-ds qSrcFile likeds(object_t) inz;
   dcl-s libRslv char(10);
   dcl-s startcompiletime timestamp;
@@ -176,23 +182,27 @@ dcl-proc crtTst export;
 
     srcCcsid = SrcMbr_getCcsid(qSrcFile);
 
-    // Ensure we have a valid EVFEVENT file member name for RDi
-    if (srcMbrRslv = '*TSTPGM');
-      mbrtype = getMemberType(qSrcFile.nm: qSrcFile.lib: testPgm);
-      if (mbrtype = MBR_RPGLE);
-        tmpopts = coption;
-      else;
-        tmpopts = poption;
-      endif;
-      for i = 1 to tmpopts.size;
-        if (tmpopts.option(i) = '*EVENTF');
-          sndEscapeMsgAboveCtlBdy(
-             'Compile option *EVENTF is not +
-              allowed with source member *TSTPGM, +
-              because it does not work in RDi. Specify +
-              the name of the source member.' );
+    // Ensure we have a valid EVFEVENT file member name for RDi.
+    // Check the parameter, not the resolved member name. Check both
+    // lists of options, because both are passed to the compiler.
+    if (srcMbr = '*TSTPGM');
+      for i = 1 to coption.size;
+        if (coption.option(i) = '*EVENTF');
+          isEventF = *on;
         endif;
       endfor;
+      for i = 1 to poption.size;
+        if (poption.option(i) = '*EVENTF');
+          isEventF = *on;
+        endif;
+      endfor;
+      if (isEventF);
+        sndEscapeMsgAboveCtlBdy(
+           'Compile option *EVENTF is not +
+            allowed with source member *TSTPGM, +
+            because it does not work in RDi. Specify +
+            the name of the source member.' );
+      endif;
     endif;
 
     // Validate we have a source member type
@@ -269,9 +279,11 @@ dcl-proc crtTst export;
     isError = *on;
   endmon;
 
+  // Compile listings are deleted on success only.
   monitor;
     deleteModulesAndSpooledFiles(
-      dltsplf : dltMod : startcompiletime : modulescreated );
+      dltsplf = *on and not isError : dltMod : startcompiletime :
+      testPgm : modulescreated );
   on-error;
   endmon;
 
@@ -343,7 +355,7 @@ dcl-proc getCreatedModulesFromJobLog;
     timelimit timestamp const;
   end-pi;
 
-  dcl-s hreader like(hjoblogreader_t);
+  dcl-ds hreader likeds(hJobLogReader_t);
   dcl-ds userdata likeds(jobLogUserData_t);
 
   clear userdata;
@@ -628,6 +640,7 @@ dcl-proc deleteModulesAndSpooledFiles;
     dltSplf   ind const;
     dltMod    ind const;
     startTime timestamp const;
+    testPgm   likeds(object_t) const;
     modules   likeds(objectArray_t) const;
   end-pi;
 
@@ -635,23 +648,35 @@ dcl-proc deleteModulesAndSpooledFiles;
   dcl-s i int(10);
   dcl-s cmd like(cmd_t);
 
-  dcl-s hLister like(hsplflister_t);
+  dcl-ds hLister likeds(hSplfLister_t);
   dcl-ds qJob likeds(job_t);
-
-  clear qJob;
-  qJob.name = '*';
+  dcl-ds userData likeds(dltSplfUserData_t) inz;
 
   for i = 1 to modules.size;
     if (dltMod);
       cmd = getDltModCmd( modules.object(i) );
       qcmdexc(cmd: %len(cmd));
     endif;
-
-    if (dltSplf);
-      hLister = splflister_init(qJob);
-      splfLister_list(hLister: %paddr('deleteSplfCallback'));
-    endif;
   endfor;
+
+  if (dltSplf);
+    // The compile listings are the spooled files of this job, that
+    // have been created since the compilation started and that are
+    // named like the test program or one of the created modules.
+    userData.numNames = 1;
+    userData.name(userData.numNames) = testPgm.nm;
+    for i = 1 to modules.size;
+      userData.numNames += 1;
+      userData.name(userData.numNames) = modules.object(i).nm;
+    endfor;
+
+    clear qJob;
+    qJob.name = '*';
+
+    hLister = splflister_init(qJob);
+    SplFLister_setStartTime(hLister: startTime);
+    splfLister_list(hLister: %paddr('deleteSplfCallback'): %addr(userData));
+  endif;
 
 end-proc;
 
@@ -666,7 +691,13 @@ dcl-proc deleteSplfCallback;
     i_filestatus char(10) const;
   end-pi;
 
+  dcl-ds userData likeds(dltSplfUserData_t) based(i_puserdata);
   dcl-s cmd like(cmd_t);
+
+  // Keep spooled files, that are not a compile listing.
+  if (%lookup(i_splfnm: userData.name: 1: userData.numNames) = 0);
+    return *on;
+  endif;
 
   cmd = 'DLTSPLF FILE(' + %trim(i_splfnm) + ') +
   JOB(' + %trim(i_qJob.nbr) + '/' +
@@ -899,7 +930,7 @@ dcl-proc getCrtRpgModCmd export;
       if (%scan( PARM_INCDIR + '(' : uCase( compileOpt )) = 0);
         dbgCompileOpt += serializeIncDir(incDir);
       endif;
-      if (%scan( PARM_OPTION + '(' : uCase( cOption )) = 0);
+      if (%scan( PARM_OPTION + '(' : uCase( compileOpt )) = 0);
         dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
       endif;
       else;
@@ -1014,7 +1045,7 @@ dcl-proc getCrtCblModCmd export;
       if (%scan( PARM_INCDIR + '(' : uCase( compileOpt )) = 0);
         dbgCompileOpt += serializeIncDir(incDir);
       endif;
-      if (%scan( PARM_OPTION + '(' : uCase( cOption )) = 0);
+      if (%scan( PARM_OPTION + '(' : uCase( compileOpt )) = 0);
         dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
       endif;
     else;

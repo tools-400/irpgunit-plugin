@@ -1,4 +1,4 @@
-  <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 
 <html>
 <head>
@@ -11,13 +11,17 @@
 <h1>assertJobLogContains (assert job log contains message)</h1>
 <b>Syntax:</b>
 <p class="indent">
-<code>assertJobLogContains( msgId : timeLimit );</code>
+<code>assertJobLogContains( msgId : sinceTime );</code>
 </p>
-<b>Description:</b>
+<b>Beschreibung:</b>
 <p class="indent">
-Prüft, ob das Jobprotokoll eine gegebene Nachrichten ID im gegebenen
-Zeitraum JETZT und <i>timeLimit</i> enthält.<br>
-Der Wert von <i>timeLimit</i> sollte mit der Funktion <a href="./getFullTimestamp.html">getFullTimeStamp()</a> gesetzt werden.
+Prüft, ob das Jobprotokoll eine Nachricht mit der gegebenen Nachrichten-ID enthält, die seit
+<i>sinceTime</i> gesendet wurde. Nachrichten, die vor <i>sinceTime</i> gesendet wurden, werden ignoriert.<br>
+Der Wert von <i>sinceTime</i> sollte mit der Funktion <a href="./getFullTimestamp.html">getFullTimeStamp()</a> gesetzt werden.
+</p>
+<b>Funktionswert:</b>
+<p class="indent">
+void
 </p>
 <b>Beispiel:</b>
 <p>

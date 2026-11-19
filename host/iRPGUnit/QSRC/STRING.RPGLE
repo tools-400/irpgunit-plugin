@@ -59,9 +59,10 @@ dcl-proc uCase export;
     string  like(String_t) const options(*varsize);
   end-pi;
 
-  dcl-s uCase varchar(4096) inz;
+  dcl-s uCase like(String_t) inz;
 
-  dcl-s stringBuf char(4096) inz;
+  // Same length as String_t
+  dcl-s stringBuf char(5120) inz;
   dcl-ds errCode likeds(errCode_t ) inz;
 
   dcl-ds reqCtrlBlk likeds(reqCtrlBlk_ccsid_t) inz;
@@ -93,9 +94,10 @@ dcl-proc lCase export;
     string  like(String_t) const options(*varsize);
   end-pi;
 
-  dcl-s lCase varchar(4096) inz;
+  dcl-s lCase like(String_t) inz;
 
-  dcl-s stringBuf char(4096) inz;
+  // Same length as String_t
+  dcl-s stringBuf char(5120) inz;
   dcl-ds errCode likeds(errCode_t ) inz;
 
   dcl-ds reqCtrlBlk likeds(reqCtrlBlk_ccsid_t) inz;

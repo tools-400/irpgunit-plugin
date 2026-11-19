@@ -105,11 +105,13 @@
  executeUnitTest('MKMSGQT', 'MSGQT')
  executeUnitTest('MKOPDESCT', 'OPDESCT')
  executeUnitTest('MKPGMMSGT', 'PGMMSGT')
+ executeUnitTest('MKRMTRUNST', 'RMTRUNSRVT')
  executeUnitTest('MKRUNT', 'RUNT')
  executeUnitTest('MKSRCMBRT', 'SRCMBRT')
  executeUnitTest('MKSTMFT', 'STMFT')
  executeUnitTest('MKSTRINGT', 'STRINGT')
  executeUnitTest('MKUTILST', 'TESTUTILST')
+ executeUnitTest('MKXMLSTMFT', 'XMLSTMFT')
 
  "SNDPGMMSG ",
    "MSGID(CPF9897) ",

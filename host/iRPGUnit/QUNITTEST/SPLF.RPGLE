@@ -130,7 +130,7 @@ dcl-proc dltSplfs export;
     usrData char(10) value;
   end-pi;
 
-  dcl-s hLister like(hSplFLister_t);
+  dcl-ds hLister likeds(hSplfLister_t);
   dcl-ds userData likeds(userData_t);
 
   clear userData;

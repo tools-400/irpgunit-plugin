@@ -74,7 +74,7 @@ end-pr;
 //----------------------------------------------------------------------
 
 dcl-ds jobLogUserData_t qualified template;
-  timeLimit   timestamp;
+  sinceTime   timestamp;
   msgID       char(7);
   isFound     ind;
 end-ds;
@@ -378,6 +378,10 @@ dcl-proc doAssert export;
   end-pi;
 
   checkStartPgm();
+
+  // The test is running again. Hence it has monitored the
+  // escape message of a previously failed assertion.
+  g_status.isAssertionError = *off;
 
   g_status.numAssertsCalled += 1;
 
@@ -737,20 +741,21 @@ end-proc;
 
 
 //----------------------------------------------------------------------
-// Searches the job log backwards for a specific message key, starting
-// with the most recent message and back to a given timestamp.
+// Searches the job log backwards for a specific message ID, starting
+// with the most recent message and back to the message sent at or
+// after 'sinceTime'.
 //----------------------------------------------------------------------
 dcl-proc assertJoblogContains export;
   dcl-pi *N opdesc;
     msgID           char(7) const;
-    timeLimit       timestamp const;
+    sinceTime       timestamp const;
   end-pi;
 
-  dcl-s hReader         like(hjoblogreader_t);
+  dcl-ds hReader        likeds(hJobLogReader_t);
   dcl-ds userData likeds(jobLogUserData_t);
 
   clear userData;
-  userData.timeLimit = timeLimit;
+  userData.sinceTime = sinceTime;
   userData.isFound = *off;
   userData.msgID = msgID;
 
@@ -777,7 +782,7 @@ dcl-proc ASSERT_jobLogCallback;
   dcl-ds userData likeds(jobLogUserData_t)
   based(i_pUserData);
 
-  if (i_msgSentTime < userData.timeLimit);
+  if (i_msgSentTime < userData.sinceTime);
     return *off;
   endif;
 
@@ -794,7 +799,7 @@ end-proc;
 //----------------------------------------------------------------------
 // Searches a given message queue backwards for a message identified
 // by 'Id', 'text' or 'help text' starting with the most recent message
-// and back to a given timestamp.
+// and back to the message sent at or after 'sinceTime'.
 //----------------------------------------------------------------------
 dcl-proc assertMessageQueueContains export;
   dcl-pi *N opdesc;
@@ -803,7 +808,7 @@ dcl-proc assertMessageQueueContains export;
     msgID           char(7) options(*omit) const;
     msgText         varchar(132) options(*omit) const;
     msgHelp         varchar(256) options(*omit) const;
-    timeLimit       timestamp const;
+    sinceTime       timestamp const;
   end-pi;
 
   // Message queue message field selection for QGYOLMSG API.
@@ -823,9 +828,15 @@ dcl-proc assertMessageQueueContains export;
     fldId           int(10) dim(4) inz;
   end-ds;
 
+  // Maximum length of the message help compared with 'msgHelp'.
+  // SECLVL allows 3000 characters, plus replacement data. Do not
+  // exceed the length of String_t, the parameter type of compare().
+  dcl-c MAX_MSG_HELP_LEN 4096;
+
   dcl-s checkMsgID       ind inz(*off);
   dcl-s checkMsgText     ind inz(*off);
   dcl-s checkMsgHelp     ind inz(*off);
+  dcl-s isCheckEmpty     ind inz(*off);
   dcl-s checkCount       int(10) inz(0);
   dcl-s checkMatch       int(10) inz(0);
 
@@ -883,6 +894,7 @@ dcl-proc assertMessageQueueContains export;
     checkCount += 1;
     fldSelect.fldCnt += 1;
     fldSelect.fldId(fldSelect.fldCnt) = LSTM_MSG_HELP_WITH_RPL_DATA;
+    fldSelect.maxMsgHlpLen = MAX_MSG_HELP_LEN;
   endif;
 
   if (checkMsgID);
@@ -890,6 +902,7 @@ dcl-proc assertMessageQueueContains export;
       sndEscapeMsgToCaller('All other selection parameters must be +
                             omitted, when msgId is set to ''*EMPTY''');
     endif;
+    isCheckEmpty = (msgID = '*EMPTY');
   endif;
 
   qgyolmsg(msgQueueList :
@@ -903,36 +916,35 @@ dcl-proc assertMessageQueueContains export;
            msgQueuesUsed :
            percolateErrors);
 
-  p_msgBasicInfo = %addr(msgQueueList);
-  msgIdx = 1;
-
-  checkMatch = 0;
   p_fldInfo = *null;
 
-  if checkMsgID and msgID = '*EMPTY' and listInfo.totalRcdCnt = 0;
-    return;
-  endif;
-
-  dow listInfo.totalRcdCnt > 0;
-    if msgIdx > listInfo.retRcdCnt;
-      if listInfo.totalRcdCnt > listInfo.retRcdCnt;
-        sndEscapeMsgToCaller('Insufficient implementation. ' +
-              'Should use QGYGTLE to retrieve records after ' +
-                           %char(listInfo.retRcdCnt) + '. ' +
-                                      'Please open an issue.');
-      else;
-        leave;
-      endif;
-    endif;
+  // Retrieve the messages one by one, because the receiver
+  // of QGYOLMSG holds only the first part of the list.
+  for msgIdx = 1 to listInfo.totalRcdCnt;
+    qgygtle(msgQueueList: %size(msgQueueList): listInfo.rqsHdl: listInfo
+            : 1: msgIdx: percolateErrors);
+    p_msgBasicInfo = %addr(msgQueueList);
 
     sentTimestamp = getSentTimeMsgQMsg(msgBasicInfo);
 
-    if sentTimestamp < timeLimit;
+    if sentTimestamp < sinceTime;
       leave;
     endif;
 
+    // Special value *EMPTY: A message sent since 'sinceTime'
+    // means that the message queue is not empty.
+    if isCheckEmpty;
+      msgFound = *on;
+      leave;
+    endif;
+
+    // Count the criteria matched by the current message.
+    checkMatch = 0;
+
     if checkMsgID;
-      checkMatch += 1;
+      if msgBasicInfo.msgID = msgID;
+        checkMatch += 1;
+      endif;
     endif;
 
     if (msgBasicInfo.retFldCnt > 0);
@@ -964,15 +976,15 @@ dcl-proc assertMessageQueueContains export;
       msgFound = *on;
       leave;
     endif;
-
-    // Go to next message in the job log.
-    p_msgBasicInfo = %addr(msgQueueList) + msgBasicInfo.nextEntOffs;
-    msgIdx += 1;
-  enddo;
+  endfor;
 
   qgyclst(listInfo.rqsHdl: percolateErrors);
 
-  assert(msgFound: 'Message not found in message queue.');
+  if isCheckEmpty;
+    assert(not msgFound: 'Message queue is not empty.');
+  else;
+    assert(msgFound: 'Message not found in message queue.');
+  endif;
 
 end-proc;
 

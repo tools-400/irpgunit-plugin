@@ -239,6 +239,122 @@ on-exit;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// A runtime error after a failed assertion, whose escape message has
+// been monitored, must be reported as an error.
+//----------------------------------------------------------------------
+dcl-proc test_runTestProc_errAfterMonFail export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds testResult likeds(testCaseResult_t);
+  dcl-ds lastTestEvent likeds(abstractTestEvent_t) based(pLastTestEvent);
+  dcl-s outcome like(outcome_t);
+  dcl-s lastOutcome like(outcome_t);
+  dcl-s lastSndProc like(procNm_t);
+  dcl-s isException ind inz(*off);
+
+  // -----------------------------
+  // save current assertion status
+  // -----------------------------
+  saveAssertStatus();
+
+  // Execution.
+
+  g_testProc.procPtr = %paddr(test_error_after_monitored_failure);
+  g_testProc.procNm = 'test_error_after_monitored_failure';
+
+  monitor;
+    testResult = runTestProc(g_testProc: noSetUp: noTearDown);
+  on-error;
+    isException = *on;
+  endmon;
+
+  if (not isException);
+    outcome = testResult.outcome;
+    // The list entry has the size of the event type,
+    // hence access it with a based data structure.
+    pLastTestEvent = list_getLast(testResult.hTestEvents);
+    lastOutcome = lastTestEvent.outcome;
+    if (lastOutcome = TEST_CASE_ERROR);
+      lastSndProc = lastTestEvent.error.msg.qSndStmt.procNm;
+    endif;
+    disposeTestResult(testResult);
+  endif;
+
+  // --------------------------------
+  // restore current assertion status
+  // --------------------------------
+  restoreAssertStatus();
+
+  // Controls.
+
+  assert(not isException: 'runTestProc() must not raise an exception');
+  aEqual(TEST_CASE_ERROR: outcome);
+  aEqual(TEST_CASE_ERROR: lastOutcome);
+  aEqual('raiseError': lastSndProc);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// Same as test_runTestProc_errAfterMonFail(), but with a successful
+// assertion between the monitored failure and the runtime error.
+//----------------------------------------------------------------------
+dcl-proc test_runTestProc_errAfterMonSucc export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds testResult likeds(testCaseResult_t);
+  dcl-ds lastTestEvent likeds(abstractTestEvent_t) based(pLastTestEvent);
+  dcl-s outcome like(outcome_t);
+  dcl-s lastOutcome like(outcome_t);
+  dcl-s lastSndProc like(procNm_t);
+  dcl-s isException ind inz(*off);
+
+  // -----------------------------
+  // save current assertion status
+  // -----------------------------
+  saveAssertStatus();
+
+  // Execution.
+
+  g_testProc.procPtr = %paddr(test_error_after_monitored_failure_and_success);
+  g_testProc.procNm = 'test_error_after_monitored_failure_and_success';
+
+  monitor;
+    testResult = runTestProc(g_testProc: noSetUp: noTearDown);
+  on-error;
+    isException = *on;
+  endmon;
+
+  if (not isException);
+    outcome = testResult.outcome;
+    // The list entry has the size of the event type,
+    // hence access it with a based data structure.
+    pLastTestEvent = list_getLast(testResult.hTestEvents);
+    lastOutcome = lastTestEvent.outcome;
+    if (lastOutcome = TEST_CASE_ERROR);
+      lastSndProc = lastTestEvent.error.msg.qSndStmt.procNm;
+    endif;
+    disposeTestResult(testResult);
+  endif;
+
+  // --------------------------------
+  // restore current assertion status
+  // --------------------------------
+  restoreAssertStatus();
+
+  // Controls.
+
+  assert(not isException: 'runTestProc() must not raise an exception');
+  aEqual(TEST_CASE_ERROR: outcome);
+  aEqual(TEST_CASE_ERROR: lastOutcome);
+  aEqual('raiseError': lastSndProc);
+
+end-proc;
+
+
 dcl-proc test_runTestProc_withSetup export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
@@ -849,6 +965,42 @@ dcl-proc test_proc;
   end-pi;
 
   traceCall('test_proc');
+
+end-proc;
+
+
+dcl-proc test_error_after_monitored_failure;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  traceCall('test_error_after_monitored_failure');
+
+  monitor;
+    aEqual('a': 'b');
+  on-error;
+    // Expected failure, ignored.
+  endmon;
+
+  raiseError();
+
+end-proc;
+
+
+dcl-proc test_error_after_monitored_failure_and_success;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  traceCall('test_error_after_monitored_failure_and_success');
+
+  monitor;
+    aEqual('a': 'b');
+  on-error;
+    // Expected failure, ignored.
+  endmon;
+
+  aEqual('a': 'a');
+
+  raiseError();
 
 end-proc;
 

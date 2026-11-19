@@ -9,7 +9,17 @@
 //  http://www.eclipse.org/legal/cpl-v10.html
 // ==========================================================================
 
-dCl-S hJobLogReader_t varchar(1024) template;
+/include qsysinc,QGYOLJBL
+
+// Handle of a job log reader. Its fields are used by module JOBLOG only.
+dcl-ds hJobLogReader_t qualified template;
+  isPrepared ind;
+  fldSlcSize int(10);
+  msgQ       varchar(10);
+  currMsgCnt int(10);
+  data       char(1024);
+  fieldSelect likeds(fldSelect_QGYOLJBL_t) overlay(data);
+end-ds;
 
 dcl-ds jl_rd_msgInfo_t qualified template;
   severity   int(10);
@@ -48,7 +58,7 @@ dcl-c JL_RD_MSG_ALL  '*';
 //
 // @return Handle to the initialized job log reader instance
 ///
-dcl-pr JobLogReader_init like(hJobLogReader_t) extproc('JOBLOG_JobLogReader_init');
+dcl-pr JobLogReader_init likeds(hJobLogReader_t) extproc('JOBLOG_JobLogReader_init');
   i_direction varchar(10) const;
   i_msgQ      varchar(10) options(*nopass) const;
 end-pr;
@@ -66,7 +76,7 @@ end-pr;
 // @return Status indicator (0=success, non-zero=error)
 ///
 dcl-pr JobLogReader_addField int(10) extproc('JOBLOG_JobLogReader_addField');
-  io_hReader like(hJobLogReader_t);
+  io_hReader likeds(hJobLogReader_t);
   i_fieldId  int(10) const;
 end-pr;
 
@@ -84,7 +94,7 @@ end-pr;
 // @return Success indicator (*ON=messages processed, *OFF=no more messages)
 ///
 dcl-pr JobLogReader_read ind extproc('JOBLOG_JobLogReader_read');
-  io_hReader  like(hJobLogReader_t);
+  io_hReader  likeds(hJobLogReader_t);
   i_callback  pointer(*proc) const;
   i_pUserData pointer options(*nopass) const;
 end-pr;

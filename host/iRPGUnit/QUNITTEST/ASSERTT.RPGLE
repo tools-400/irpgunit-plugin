@@ -721,6 +721,122 @@ dcl-proc testAssertEqual_string export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// assertEqual() compares strings longer than 5120 characters
+// completely.
+//----------------------------------------------------------------------
+dcl-proc testAssertEqual_stringLong export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s expected varchar(6000);
+  dcl-s actual varchar(6000);
+  dcl-s isFailed ind inz(*off);
+
+  // Setup.
+
+  dow (%len(expected) < %len(expected: *max));
+    expected += 'x';
+  enddo;
+  actual = expected;
+  %subst(actual: 5500: 1) = 'y';
+
+  // Run.
+
+  saveAssertStatus();
+  monitor;
+    assertEqual(expected: actual);
+  on-error;
+    isFailed = *on;
+  endmon;
+  restoreAssertStatus();
+
+  // Check.
+
+  assert(isFailed: 'assertEqual() must detect the difference at position 5500.');
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// assertEqual() compares UTF-8 strings without converting them
+// to the CCSID of the job.
+//----------------------------------------------------------------------
+dcl-proc testAssertEqual_stringUtf8 export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s expected varchar(10) ccsid(*utf8);
+  dcl-s actual varchar(10) ccsid(*utf8);
+  dcl-s isFailed ind inz(*off);
+
+  // Setup: Two characters, that do not exist in an EBCDIC SBCS CCSID.
+
+  expected = u'4E2D';
+  actual = u'6587';
+
+  // Run.
+
+  saveAssertStatus();
+  monitor;
+    assertEqual(expected: actual);
+  on-error;
+    isFailed = *on;
+  endmon;
+  restoreAssertStatus();
+
+  // Check.
+
+  assert(isFailed: 'assertEqual() must detect different UTF-8 characters.');
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// assertEqual() accepts empty strings.
+//----------------------------------------------------------------------
+dcl-proc testAssertEqual_stringEmpty export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s empty varchar(10) inz('');
+  dcl-s isFailed ind inz(*off);
+  dcl-ds assertFailEvtLong_v2 likeds(assertFailEvtLong_t) inz;
+
+  // Run: two empty strings.
+
+  saveAssertStatus();
+  monitor;
+    assertEqual(empty: empty);
+  on-error;
+    isFailed = *on;
+  endmon;
+  restoreAssertStatus();
+
+  // Check.
+
+  assert(not isFailed: 'assertEqual() must accept two empty strings.');
+
+  // Run: an empty and a non-empty string.
+
+  saveAssertStatus();
+  monitor;
+    assertEqual(empty: 'x');
+  on-error;
+    isFailed = *on;
+    assertFailEvtLong_v2 = getAssertFailEvtLong();
+  endmon;
+  restoreAssertStatus();
+
+  // Check: a failed assertion, not a runtime error.
+
+  assert(isFailed: 'assertEqual() must detect the difference to an empty string.');
+  assert(%scan('but was ''x''': assertFailEvtLong_v2.msg) > 0
+         : 'Expected the message of a failed assertion.');
+
+end-proc;
+
+
 dcl-proc testAssertEqual_integer export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

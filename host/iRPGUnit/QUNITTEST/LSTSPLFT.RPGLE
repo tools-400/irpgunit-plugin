@@ -88,7 +88,7 @@ dcl-proc tearDown export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hLister   like(hSplFLister_t);
+  dcl-ds hLister   likeds(hSplfLister_t);
   dcl-ds userData likeds(userData_t);
   dcl-ds qJob     likeds(Job_t);
 
@@ -114,7 +114,7 @@ dcl-proc testAddStatus export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hLister like(hSplFLister_t);
+  dcl-ds hLister likeds(hSplfLister_t);
   dcl-ds msgInfo likeds(msgInfo_t);
 
   hLister = SplFLister_init('*');
@@ -152,7 +152,7 @@ dcl-proc testFile1 export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hLister   like(hSplFLister_t);
+  dcl-ds hLister   likeds(hSplfLister_t);
   dcl-ds userData likeds(userData_t);
   dcl-ds qJob     likeds(Job_t);
   dcl-s splfNm varchar(10) inz('FILE1');
@@ -181,7 +181,7 @@ dcl-proc testFile2 export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hLister   like(hSplFLister_t);
+  dcl-ds hLister   likeds(hSplfLister_t);
   dcl-ds userData likeds(userData_t);
   dcl-ds qJob     likeds(Job_t);
   dcl-s splfNm varchar(10) inz('FILE2');
@@ -210,7 +210,7 @@ dcl-proc testFile3 export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hLister   like(hSplFLister_t);
+  dcl-ds hLister   likeds(hSplfLister_t);
   dcl-ds userData likeds(userData_t);
   dcl-ds qJob     likeds(Job_t);
   dcl-s splfNm varchar(10) inz('');
@@ -239,7 +239,7 @@ dcl-proc testStartAndEndTime export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
-  dcl-s hLister   like(hSplFLister_t);
+  dcl-ds hLister   likeds(hSplfLister_t);
   dcl-ds userData likeds(userData_t);
   dcl-ds qJob     likeds(Job_t);
   dcl-s startTime timestamp;

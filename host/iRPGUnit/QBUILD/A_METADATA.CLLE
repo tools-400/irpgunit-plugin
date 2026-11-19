@@ -1234,6 +1234,12 @@
                           TEXT('iRPGUnit Fixture - Test XML Output Files.')
              MONMSG     MSGID(CPF3288)
 
+             CHGPFM     FILE(&TARGETLIB/QTESTCASES) +
+                          MBR(TESTPGM24) +
+                          SRCTYPE(CBLLE) +
+                          TEXT('iRPGUnit Fixture - Failure and error in Cobol.')
+             MONMSG     MSGID(CPF3288)
+
              CHGPFM     FILE(&TARGETLIB/QUNITTEST) +
                           MBR(ACPTSTT) +
                           SRCTYPE(RPGLE) +
@@ -1415,6 +1421,12 @@
              MONMSG     MSGID(CPF3288)
 
              CHGPFM     FILE(&TARGETLIB/QUNITTEST) +
+                          MBR(MKRMTRUNST) +
+                          SRCTYPE(REXX) +
+                          TEXT('iRPGUnit - Build RMTRUNSRVT.')
+             MONMSG     MSGID(CPF3288)
+
+             CHGPFM     FILE(&TARGETLIB/QUNITTEST) +
                           MBR(MKRUNT) +
                           SRCTYPE(REXX) +
                           TEXT('iRPGUnit - Build RUNT.')
@@ -1478,6 +1490,12 @@
                           MBR(PGMMSGT) +
                           SRCTYPE(RPGLE) +
                           TEXT('iRPGUnit SelfTest - Test PGMMSG.')
+             MONMSG     MSGID(CPF3288)
+
+             CHGPFM     FILE(&TARGETLIB/QUNITTEST) +
+                          MBR(RMTRUNSRVT) +
+                          SRCTYPE(RPGLE) +
+                          TEXT('iRPGUnit SelfTest - Test RMTRUNSRV.')
              MONMSG     MSGID(CPF3288)
 
              CHGPFM     FILE(&TARGETLIB/QUNITTEST) +

@@ -9,7 +9,20 @@
 //  http://www.eclipse.org/legal/cpl-v10.html
 // ==========================================================================
 
-dcl-s hSplfLister_t varchar(1024) template;
+/include qinclude,TYPES_H
+/include qsysinc,QGYOLSPL
+
+// Handle of a spooled file lister. Its fields are used by module
+// LSTSPLF only.
+dcl-ds hSplfLister_t qualified template;
+  qJob            likeds(Job_t);
+  splfNm          char(10);
+  currSplFCnt     int(10);
+  sizeFilterInfo  int(10);
+  sortInfo        likeds(sortInfo_t);
+  data            char(1024);
+  filterInfo      likeds(OSPF0200_t) overlay(data);
+end-ds;
 
 dcl-pr sl_ls_callback ind;
   i_hSplf       pointer       const;
@@ -46,7 +59,7 @@ dcl-c SL_STS_WRITING    '*WRITING';
 //
 // @return Handle to the initialized spooled file lister instance
 ///
-dcl-pr SplFLister_init like(hSplfLister_t) extproc('LSTSPLF_SplFLister_init');
+dcl-pr SplFLister_init likeds(hSplfLister_t) extproc('LSTSPLF_SplFLister_init');
   i_qJob   likeds(Job_t) options(*nopass) const;
   i_splfNm char(10)      options(*nopass) const;
   i_usrDta char(10)      options(*nopass) const;
@@ -65,7 +78,7 @@ end-pr;
 // @return Status indicator (0=success, non-zero=error)
 ///
 dcl-pr SplFLister_addStatus int(10) extproc('LSTSPLF_SplFLister_addStatus');
-  io_hLister like(hSplfLister_t);
+  io_hLister likeds(hSplfLister_t);
   i_status   char(10) const;
 end-pr;
 
@@ -82,7 +95,7 @@ end-pr;
 // @return Success indicator (*ON=filter set successfully, *OFF=error)
 ///
 dcl-pr SplFLister_setStartTime ind extproc('LSTSPLF_SplFLister_setStartTime');
-  io_hLister  like(hSplfLister_t);
+  io_hLister  likeds(hSplfLister_t);
   i_startTime timestamp const;
 end-pr;
 
@@ -99,7 +112,7 @@ end-pr;
 // @return Success indicator (*ON=filter set successfully, *OFF=error)
 ///
 dcl-pr SplFLister_setEndTime ind extproc('LSTSPLF_SplFLister_setEndTime');
-  io_hLister like(hSplfLister_t);
+  io_hLister likeds(hSplfLister_t);
   i_endTime  timestamp const;
 end-pr;
 
@@ -117,7 +130,7 @@ end-pr;
 // @return Success indicator (*ON=files processed, *OFF=no files found or error)
 ///
 dcl-pr SplFLister_list ind extproc('LSTSPLF_SplFLister_list');
-  io_hLister  like(hSplfLister_t);
+  io_hLister  likeds(hSplfLister_t);
   i_pCallback pointer(*proc) const;
   i_pUserData pointer options(*nopass) const;
 end-pr;

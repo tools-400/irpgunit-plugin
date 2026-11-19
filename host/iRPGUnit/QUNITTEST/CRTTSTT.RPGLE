@@ -1048,6 +1048,105 @@ dcl-proc testCOptionSqlCblle export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// OPTION() of COMPILEOPT overrides COPTION, like DEFINE(), TGTCCSID()
+// and INCDIR() do.
+//----------------------------------------------------------------------
+dcl-proc testOptionInCompileOptSqlRpgle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds oneCOption likeds(Options_t);
+
+  oneCOption.size = 1;
+  oneCOption.option(1) = '*SRCSTMT';
+
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 oneCOption:
+                                 noDbgView:
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 'OPTION(*NOUNREF)':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''OPTION(*NOUNREF) TGTCCSID(*JOB)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+dcl-proc testOptionInCompileOptSqlCblle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds oneCOption likeds(Options_t);
+
+  oneCOption.size = 1;
+  oneCOption.option(1) = '*NOMONOPRC';
+
+  crtCblModCmd = getCrtCblModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLCBLLE:
+                                 oneCOption:
+                                 noDbgView:
+                                 noPOption:
+                                 'OPTION(*NOSTDTRUNC)':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLCBLI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLCBLLE + ''') +
+          OBJTYPE(*MODULE) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''OPTION(*NOSTDTRUNC) TGTCCSID(*JOB)'') ': crtCblModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// COPTION(*EVENTF) does not work with SRCMBR(*TSTPGM) in RDi and
+// must be rejected.
+//----------------------------------------------------------------------
+dcl-proc testEventfWithSrcMbrTstPgm export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds msgInfo likeds(MsgInfo_t) inz;
+  dcl-s isError ind inz(*off);
+
+  // Run.
+
+  monitor;
+    runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM01) SRCFILE(QTESTCASES) +
+            SRCMBR(*TSTPGM) COPTION(*EVENTF) DLTSPLF(*YES)');
+  on-error;
+    isError = *on;
+    msgInfo = getMonitoredMessage(*on);
+  endmon;
+
+  // Check.
+
+  assert(isError: 'RUCRTRPG must reject COPTION(*EVENTF) with SRCMBR(*TSTPGM).');
+  assert(%scan('Compile option *EVENTF is not allowed': msgInfo.txt) > 0
+         : 'Unexpected message: ' + %trimr(msgInfo.txt));
+
+end-proc;
+
+
 dcl-proc testDbgViewSqlRpgle export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

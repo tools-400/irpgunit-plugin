@@ -191,39 +191,70 @@ end-pr;
 ///
 // Assert joblog contains message
 //
-// Checks whether the job log contains the specified message ID between
-// NOW and 'timeLimit'.
+// Checks whether the job log contains a message with the specified message
+// ID, that has been sent since 'sinceTime'. The job log is searched backwards,
+// starting with the most recent message.
 //
 // Examples:
-//   assertJobLogContains( 'MCH1211' : %timestamp() - %minutes(2) );
+//   testStartTime = getFullTimeStamp();
+//   // run the code, that is expected to add MCH1211 to the job log
+//   assertJobLogContains('MCH1211': testStartTime);
 //
 // @param msgId     - Message id to look for
-// @param timeLimit - Time frame to search within a job log
+// @param sinceTime - Earliest time the message may have been sent. Messages
+//                    sent before 'sinceTime' are ignored. Should be set with
+//                    getFullTimeStamp().
 //
-// @throws CPF9897 'Message '{msgId}' not found in the job log.'
+// @throws CPF9897 'Message {msgId} not found in the job log.'
 ///
 dcl-pr assertJobLogContains extproc('assertJobLogContains') opdesc;
   msgId     char(7) const;
-  timeLimit timestamp const;
+  sinceTime timestamp const;
 end-pr;
 
 ///
 // Assert message queue contains message
 //
-// Checks whether a given message queue contains the specified message ID between
-// NOW and 'timeLimit'.
+// Checks whether a given message queue contains a message, that has been
+// sent since 'sinceTime' and that matches all specified selection criteria
+// (message ID, message text, message help). Unused selection criteria must
+// be omitted. The message queue is searched backwards, starting with the
+// most recent message.
+//
+// Special value '*EMPTY' of 'msgId' checks that no message has been sent to
+// the message queue since 'sinceTime'. All other selection criteria must be
+// omitted.
 //
 // Examples:
-//   assertMessageQueueContains( 'MCH1211' : %timestamp() - %minutes(2) );
+//   testStartTime = getFullTimeStamp();
+//   // run the code, that is expected to send message CPF9897
+//   assertMessageQueueContains('MSGQ': 'QTEMP': 'CPF9897': *omit: *omit
+//                              : testStartTime);
 //
-// @param userOrQueue - User name or message queue name
-// @param library     - message queue library (optional)
-// @param msgId       - Message id to look for (optional)
-// @param msgText     - Text of message to match (optional)
-// @param msgHelp     - Help of message to match (optional)
-// @param timeLimit   - Time frame to search within a job log
+//   testStartTime = getFullTimeStamp();
+//   // run the code, that is expected to send no message
+//   assertMessageQueueContains('MSGQ': 'QTEMP': '*EMPTY': *omit: *omit
+//                              : testStartTime);
 //
-// @throws CPF9897 'Message '{msgId}' not found in the job log.'
+// @param userOrQueue - Name of the message queue, or name of a user profile,
+//                      if 'library' is omitted
+// @param library     - Library of the message queue. Omit it to search the
+//                      message queue of user profile 'userOrQueue'.
+// @param msgId       - Message id to look for or '*EMPTY' (optional)
+// @param msgText     - Text of message to match (optional). Not case-sensitive.
+//                      Generic with '*' at the beginning and/or at the end,
+//                      e.g. 'Order*', '*processed' or '*Order*'.
+// @param msgHelp     - Help of message to match (optional). Same rules as for
+//                      'msgText'. At most the first 4096 characters of the
+//                      message help are compared.
+// @param sinceTime   - Earliest time the message may have been sent. Messages
+//                      sent before 'sinceTime' are ignored. Should be set with
+//                      getFullTimeStamp().
+//
+// @throws CPF9897 'Message not found in message queue.'
+// @throws CPF9897 'Message queue is not empty.' (msgId = '*EMPTY')
+// @throws CPF9897 'All other selection parameters must be omitted, when msgId
+//                 is set to '*EMPTY''
 ///
 dcl-pr assertMessageQueueContains extproc('assertMessageQueueContains') opdesc;
   userOrQueue  char(10) const;
@@ -231,7 +262,7 @@ dcl-pr assertMessageQueueContains extproc('assertMessageQueueContains') opdesc;
   msgId        char(7) options(*omit) const;
   msgText      varchar(132) options(*omit) const;
   msgHelp      varchar(256) options(*omit) const;
-  timeLimit    timestamp const;
+  sinceTime    timestamp const;
 end-pr;
 
 ///

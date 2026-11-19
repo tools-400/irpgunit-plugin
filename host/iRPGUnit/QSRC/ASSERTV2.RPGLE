@@ -68,6 +68,8 @@ dcl-proc assertEqual_string export;
   dcl-s len_actual int(10);
   dcl-s textExpected like(String_t);
   dcl-s textActual   like(String_t);
+  dcl-s cmpExpected  like(assertString_t);
+  dcl-s cmpActual    like(assertString_t);
 
   // --- Ugly hack for figurative constants *on/*off ---
   //     See:
@@ -96,16 +98,24 @@ dcl-proc assertEqual_string export;
 
   // Display text of the values. Indicators are displayed as '*on'/'*off'
   // in the message as well as in the logged value.
+  // The values to compare stay UTF-8 and complete: the display texts are
+  // limited to the length of String_t and converted to the CCSID of the job.
   if (dataTypeExpected = DT_IND);
     textExpected = toInd(leftStr(expected: len_expected));
+    // Compare '1'/'0', so that *on equals an indicator variable.
+    cmpExpected = %subst(expected: 1: len_expected);
   else;
     textExpected = leftStr(expected: len_expected);
+    cmpExpected = expected;
   endif;
 
   if (dataTypeActual = DT_IND);
     textActual = toInd(leftStr(actual: len_actual));
+    // Compare '1'/'0', so that *on equals an indicator variable.
+    cmpActual = %subst(actual: 1: len_actual);
   else;
     textActual = leftStr(actual: len_actual);
+    cmpActual = actual;
   endif;
 
   if (%parms() >= %parmnum(message) and %addr(message) <> *NULL and
@@ -120,7 +130,7 @@ dcl-proc assertEqual_string export;
   logExpected = getLogValue(textExpected: dataTypeExpected: %proc());
   logActual = getLogValue(textActual: dataTypeActual: %proc());
 
-  condition = leftStr(expected: len_expected) = leftStr(actual: len_actual);
+  condition = (cmpExpected = cmpActual);
   doAssert(condition: logExpected: logActual: msg: ONE_CALL_STK_LVL_ABOVE: %proc());
 
 end-proc;

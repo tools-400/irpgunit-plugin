@@ -101,14 +101,7 @@ dcl-proc getSplF export;
 
   clear splf;
 
-  //if (not %open(QSYSPRT));
-  //   return splF;
-  //endif;
-  handle.hfile = Ropen('*LIBL/QSYSPRT': 'wr');
-  if (handle.hfile = *null);
-    return splf;
-  endif;
-
+  // Spooled file of the latest report, retrieved by opnPrt().
   splf.system = curr_splf.system;
   splf.nm = curr_splf.name;
   splf.nbr = curr_splf.splfNbr;

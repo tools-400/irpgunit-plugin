@@ -1,0 +1,97 @@
+      *=====================================================================*
+      *  iRPGUnit Fixture - Failure and error in a Cobol test suite.       *
+      *=====================================================================*
+      *  Copyright (c) 2026 iRPGUnit Project Team                           *
+      *  All rights reserved. This program and the accompanying materials   *
+      *  are made available under the terms of the Common Public License    *
+      *  v1.0 which accompanies this distribution, and is available at      *
+      *  http://www.eclipse.org/legal/cpl-v10.html                          *
+      *=====================================================================*
+      *  Tools/400 STRPREPRC instructions:                                  *
+      *   >>PRE-COMPILER<<                                                  *
+      *     >>CRTCMD<<  RUCRTCBL    TSTPGM(&LI/&OB) +                       *
+      *                             SRCFILE(&SL/&SF) SRCMBR(&SM);           *
+      *     >>IMPORTANT<<                                                   *
+      *       >>PARM<< COPTION(*EVENTF);                                    *
+      *       >>PARM<< DBGVIEW(*LIST);                                      *
+      *     >>END-IMPORTANT<<                                               *
+      *     >>EXECUTE<<                                                     *
+      *   >>END-PRE-COMPILER<<                                              *
+      *=====================================================================*
+
+      *=====================================================================*
+      *  Runtime error: CHKOBJ sends the escape message CPF9801.
+      *=====================================================================*
+       PROCESS  NOMONOPRC.
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TEST_ERROR.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+         Special-Names.
+       Copy CBLLINKAGE Of QINCLUDE.
+      * Terminate Special-Names section , because CBLLINKAGE
+      * does not do that.
+         .
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  cmd     Pic x(41)
+               Value "CHKOBJ OBJ(QTEMP/NOTEXIST) OBJTYPE(*FILE)".
+       01  cmdLen  Pic S9(10)V9(5) Packed-Decimal Value 41.
+       PROCEDURE DIVISION.
+       TEST_ERROR.
+
+           Call "QCMDEXC" Using By Content cmd
+                                By Content cmdLen.
+
+           GOBACK.
+
+       END PROGRAM TEST_ERROR.
+
+      *=====================================================================*
+      *  Failed assertion.
+      *=====================================================================*
+       PROCESS  NOMONOPRC.
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TEST_FAILURE.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+         Special-Names.
+       Copy CBLLINKAGE Of QINCLUDE.
+      * Terminate Special-Names section , because CBLLINKAGE
+      * does not do that.
+         .
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       PROCEDURE DIVISION.
+       TEST_FAILURE.
+
+           Call "assert" Using By Content B"0"
+                               By Content "Expected failure.".
+
+           GOBACK.
+
+       END PROGRAM TEST_FAILURE.
+
+      *=====================================================================*
+      *  Successful assertion.
+      *=====================================================================*
+       PROCESS  NOMONOPRC.
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TEST_SUCCESS.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+         Special-Names.
+       Copy CBLLINKAGE Of QINCLUDE.
+      * Terminate Special-Names section , because CBLLINKAGE
+      * does not do that.
+         .
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       PROCEDURE DIVISION.
+       TEST_SUCCESS.
+
+           Call "assert" Using By Content B"1".
+
+           GOBACK.
+
+       END PROGRAM TEST_SUCCESS.

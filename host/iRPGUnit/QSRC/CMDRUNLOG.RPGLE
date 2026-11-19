@@ -645,14 +645,6 @@ dcl-proc getLogSplF export;
   dcl-pi *N likeds(splf_t);
   end-pi;
 
-  dcl-ds splf likeds(splf_t);
-
-  clear splf;
-
-  if (g_hdrWasPrinted);
-    splf = getSplF();
-  endif;
-
   return getSplF();
 
 end-proc;

@@ -117,6 +117,40 @@ dcl-proc testLCase export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// uCase() and lCase() accept strings up to the length of string_t.
+//----------------------------------------------------------------------
+dcl-proc testUCaseLCaseLongString export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-c LENGTH 4500;
+  dcl-s lower like(string_t);
+  dcl-s upper like(string_t);
+  dcl-s result like(string_t);
+
+  // Setup.
+
+  lower = '';
+  upper = '';
+  dow (%len(lower) < LENGTH);
+    lower += 'abcdefghij';
+    upper += 'ABCDEFGHIJ';
+  enddo;
+
+  // Run and check.
+
+  result = uCase(lower);
+  iEqual(LENGTH: %len(result));
+  assert(result = upper: 'uCase() must return all characters in upper case.');
+
+  result = lCase(upper);
+  iEqual(LENGTH: %len(result));
+  assert(result = lower: 'lCase() must return all characters in lower case.');
+
+end-proc;
+
+
 dcl-proc testLeftStr export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

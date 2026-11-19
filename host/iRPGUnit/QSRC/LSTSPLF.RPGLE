@@ -38,17 +38,6 @@ ctl-opt NoMain;
 //   TYPE TEMPLATES
 //----------------------------------------------------------------------
 
-dcl-ds hLister_t qualified template;
-  length          int(5);
-  qJob            likeds(Job_t);
-  splfNm          char(10);
-  currSplFCnt     int(10);
-  sizeFilterInfo  int(10);
-  sortInfo        likeds(sortInfo_t);
-  data            char(1024);
-  filterInfo      likeds(OSPF0200_t) overlay(data);
-end-ds;
-
 //----------------------------------------------------------------------
 //   CONSTANTS
 //----------------------------------------------------------------------
@@ -78,7 +67,7 @@ end-pr;
 //  spooled file lister handle on succeess, else ''.
 //----------------------------------------------------------------------
 dcl-proc SplfLister_init export;
-  dcl-pi *n like(hSplFLister_t);
+  dcl-pi *n likeds(hSplfLister_t);
     i_qJob    likeds(Job_t) const options(*nopass);
     i_splfNm  char(10)      const options(*nopass);
     i_usrDta  char(10)      const options(*nopass);
@@ -88,8 +77,7 @@ dcl-proc SplfLister_init export;
   dcl-s splfNm like(i_splfNm);
   dcl-s usrDta like(i_usrDta);
 
-  dcl-s hListerRtn like(hSplFLister_t);
-  dcl-ds hLister likeds(hLister_t) based(pHListerDS);
+  dcl-ds hLister likeds(hSplfLister_t);
 
   if (%parms() >= %parmnum(i_qJob));
     qJob = i_qJob;
@@ -108,8 +96,6 @@ dcl-proc SplfLister_init export;
   else;
     usrDta = USRDTA_ALL;
   endif;
-
-  pHListerDS = %addr(hListerRtn);
 
   clear hLister;
   hLister.filterInfo.lenFltrInf = %size(hLister.filterInfo);
@@ -136,12 +122,10 @@ dcl-proc SplfLister_init export;
   hLister.splfNm = splfNm;
   hLister.currSplFCnt = 0;
   hLister.sizeFilterInfo = %size(hLister.filterInfo);
-  hLister.length = %addr(hLister.filterInfo) - %addr(hLister)
-                   + %size(hLister.filterInfo);
 
-  SplFLister_addStatus(hListerRtn: SL_STS_READY);
+  SplFLister_addStatus(hLister: SL_STS_READY);
 
-  return hListerRtn;
+  return hLister;
 
 end-proc;
 
@@ -152,11 +136,11 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc SplFLister_addStatus export;
   dcl-pi *n int(10);
-    io_hLister   like(hSplFLister_t);
+    io_hLister   likeds(hSplfLister_t);
     i_status     char(10) const;
   end-pi;
 
-  dcl-ds hLister likeds(hLister_t) based(pHLister);
+  dcl-ds hLister likeds(hSplfLister_t) based(pHLister);
 
   dcl-s checkLength int(10);
   dcl-s status like(OSPF0200_fileStatusE_t) based(pStatus);
@@ -164,7 +148,8 @@ dcl-proc SplFLister_addStatus export;
 
   pHLister = %addr(io_hLister);
 
-  if (hLister.length >= %size(hLister.data) - %size(status));
+  // No space left for another status in the filter information
+  if (hLister.sizeFilterInfo + %size(status) > %size(hLister.data));
     return -1;
   endif;
 
@@ -223,7 +208,6 @@ dcl-proc SplFLister_addStatus export;
   hLister.filterInfo.numSplfSts += 1;
 
   hLister.sizeFilterInfo += %size(status);
-  hLister.length += %size(status);
 
   return hLister.filterInfo.numSplfSts;
 
@@ -236,11 +220,11 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc SplFLister_setStartTime export;
   dcl-pi *n ind;
-    io_hLister   like(hSplFLister_t);
+    io_hLister   likeds(hSplfLister_t);
     i_startTime  timestamp const;
   end-pi;
 
-  dcl-ds hLister likeds(hLister_t) based(pHLister);
+  dcl-ds hLister likeds(hSplfLister_t) based(pHLister);
 
   dcl-s endCrtTime timestamp;
 
@@ -277,11 +261,11 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc SplFLister_setEndTime export;
   dcl-pi *n ind;
-    io_hLister   like(hSplFLister_t);
+    io_hLister   likeds(hSplfLister_t);
     i_endTime  timestamp const;
   end-pi;
 
-  dcl-ds hLister likeds(hLister_t) based(pHLister);
+  dcl-ds hLister likeds(hSplfLister_t) based(pHLister);
 
   dcl-s startCrtTime timestamp;
 
@@ -316,14 +300,14 @@ end-proc;
 //----------------------------------------------------------------------
 dcl-proc SplFLister_list export;
   dcl-pi *n ind;
-    io_hLister   like(hSplFLister_t);
+    io_hLister   likeds(hSplfLister_t);
     i_pCallback  pointer(*proc) const;
     i_pUserData  pointer options(*nopass) const;
   end-pi;
 
   dcl-s pUserData like(i_pUserData);
 
-  dcl-ds hLister likeds(hLister_t) based(pHLister);
+  dcl-ds hLister likeds(hSplfLister_t) based(pHLister);
   dcl-ds ospl0300 likeds(dsOSPL0300);
   dcl-ds listInfo likeds(dsOpnList);
   dcl-ds percolateErrors likeds(percolateErrors_t) inz(*likeds);

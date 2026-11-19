@@ -292,10 +292,147 @@ dcl-proc test_monitorMessage export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// The sender of a monitored message is retrieved completely, also
+// for a message with a long help text.
+//----------------------------------------------------------------------
+dcl-proc test_monitorMessageWithLongHelp export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-c MSG_WITH_SHORT_HELP 'MSG0001';
+  dcl-c MSG_WITH_LONG_HELP 'MSG0002';
+
+  dcl-ds msgShortHelp likeds(MsgInfo_t) inz;
+  dcl-ds msgLongHelp likeds(MsgInfo_t) inz;
+
+  // Setup.
+
+  crtMsgFileWithHelp();
+  setLowMessageKey(getHighestMsgKey());
+
+  // Run.
+
+  monitor;
+    sndEscapeMsgOfMsgFile(MSG_WITH_SHORT_HELP);
+    fail('sndEscapeMsgOfMsgFile() did not raise an error.');
+  on-error;
+    msgShortHelp = getMonitoredMessage(*on);
+  endmon;
+
+  monitor;
+    sndEscapeMsgOfMsgFile(MSG_WITH_LONG_HELP);
+    fail('sndEscapeMsgOfMsgFile() did not raise an error.');
+  on-error;
+    msgLongHelp = getMonitoredMessage(*on);
+  endmon;
+
+  dltMsgFile();
+
+  // Check.
+
+  aEqual(MSG_WITH_SHORT_HELP: msgShortHelp.id);
+  aEqual(MSG_WITH_LONG_HELP: msgLongHelp.id);
+  aEqual('sndEscapeMsgOfMsgFile': msgLongHelp.proc);
+  assert(msgShortHelp.specNb <> '': 'Statement number of the short message is missing.');
+  aEqual(msgShortHelp.specNb: msgLongHelp.specNb);
+
+end-proc;
+
+
 dcl-proc getCaller;
   dcl-pi *n like(procNm_t) extproc(*dclcase);
   end-pi;
 
   return caller();
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+//   Helper Procedures of test_monitorMessageWithLongHelp()
+//   (at the end, so that the statement numbers of procWithError()
+//   checked by test_rcvExcpMsgInfo() and test_monitorMessage()
+//   do not change)
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Creates message file QTEMP/PGMMSGTF with message MSG0001 with a
+// short help text and message MSG0002 with a long help text.
+//----------------------------------------------------------------------
+dcl-proc crtMsgFileWithHelp;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-c MSG_FILE_QNM 'QTEMP/PGMMSGTF';
+
+  dcl-s longHelp varchar(3000);
+  dcl-s i int(10);
+
+  dltMsgFile();
+
+  runCmd('CRTMSGF MSGF(' + MSG_FILE_QNM + ') +
+          TEXT(''iRPGUnit SelfTest - Test Message File.'')');
+
+  runCmd('ADDMSGD MSGID(MSG0001) MSGF(' + MSG_FILE_QNM + ') +
+          MSG(''PGMMSGT - message with short help'') +
+          SECLVL(''PGMMSGT - short help text'')');
+
+  // Help text of 2486 characters (SECLVL allows 3000)
+  longHelp = '';
+  for i = 1 to 130;
+    longHelp += 'PGMMSGT long help. ';
+  endfor;
+  longHelp += 'END-OF-LONG-HELP';
+
+  runCmd('ADDMSGD MSGID(MSG0002) MSGF(' + MSG_FILE_QNM + ') +
+          MSG(''PGMMSGT - message with long help'') +
+          SECLVL(''' + longHelp + ''')');
+
+end-proc;
+
+
+dcl-proc dltMsgFile;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  monitor;
+     runCmd('DLTMSGF MSGF(QTEMP/PGMMSGTF)');
+  on-error;
+     // Ignore errors
+  endmon;
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// Sends an escape message of message file QTEMP/PGMMSGTF to the
+// caller. All messages are sent by the same statement.
+//----------------------------------------------------------------------
+dcl-proc sndEscapeMsgOfMsgFile;
+  dcl-pi *n extproc(*dclcase);
+    msgId char(7) const;
+  end-pi;
+
+  // Send Program Message (local prototype)
+  dcl-pr sndPgmMsgApi extpgm('QMHSNDPM');
+    msgID           char(7) const;
+    qMsgF           char(20) const;
+    msgData         char(256) const options(*varsize);
+    msgDataLen      int(10) const;
+    msgType         char(10) const;
+    callStkEnt      char(10) const;
+    callStkCnt      int(10) const;
+    msgKey          char(4);
+    error           char(8);
+  end-pr;
+
+  dcl-s msgKey char(4);
+  dcl-ds errCode qualified;
+    bytPrv int(10) inz(0);
+    bytAvl int(10) inz(0);
+  end-ds;
+
+  sndPgmMsgApi(msgId: 'PGMMSGTF  QTEMP': '': 0: '*ESCAPE': '*': 1: msgKey: errCode);
 
 end-proc;

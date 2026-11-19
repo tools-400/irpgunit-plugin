@@ -333,6 +333,9 @@ dcl-proc createV6TestCase;
 
   offsTestCaseEvent = testCase.offsFirstTestCaseEvent;
 
+  // Start with the first event, also if an earlier iteration
+  // has been aborted, e.g. by writeTestReport().
+  list_resetIteration(testCaseResult.hTestEvents);
   pAbstractTestEvent = list_getNext(testCaseResult.hTestEvents);
   dow (pAbstractTestEvent <> *null);
 
@@ -416,7 +419,7 @@ dcl-proc appendTestCaseEvent;
     sender.lenProcNm = %len(runtimeErrorEvent.msg.qSndStmt.procNm);
     memcpy(usPtr + sender.offsProcNm
            : %addr(runtimeErrorEvent.msg.qSndStmt.procNm: *data)
-           : testCaseEvent.lenExcpMsg);
+           : sender.lenProcNm);
 
     sender.lenEntry += sender.lenProcNm;
 
@@ -437,7 +440,7 @@ dcl-proc appendTestCaseEvent;
     receiver.lenProcNm = %len(runtimeErrorEvent.msg.qRcvStmt.procnm);
     memcpy(usPtr + receiver.offsProcNm
            : %addr(runtimeErrorEvent.msg.qRcvStmt.procNm: *data)
-           : testCaseEvent.lenExcpMsg);
+           : receiver.lenProcNm);
 
     receiver.lenEntry += receiver.lenProcNm;
 

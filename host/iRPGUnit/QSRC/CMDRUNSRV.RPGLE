@@ -162,13 +162,11 @@ dcl-proc runTestSuite export;
     updateLogContext(getLibl());
     testSuite = loadTestSuite( qTestSuite );
   on-error;
-    checkAndRestoreLibl(mustRestoreLibl: savedLibl);
     raiseRUError( 'Error while loading test suite '
                 + Object_qName(qTestSuite) + '.' );
   endmon;
 
   if (testSuite.testCasesCnt = 0);
-    checkAndRestoreLibl(mustRestoreLibl: savedLibl);
     raiseRUError( 'No test case found in service program '
                 + Object_qName(qTestSuite) + '.' );
   endif;
@@ -204,9 +202,6 @@ dcl-proc runTestSuite export;
   if (%parms() >= %parmnum(userSpace) and %addr(userSpace) <> *null);
     fillUserSpace(userSpace : testSuite : qTestSuite : testSuiteResult: g_status.isJUnitStyle);
   endif;
-
-  // Restore library list
-  checkAndRestoreLibl(mustRestoreLibl: savedLibl);
 
   monitor;
     maxSizeAllocMem = MemMgr_getMaxSizeAllocMem();
@@ -245,6 +240,10 @@ dcl-proc runTestSuite export;
       return *off; // FAILURE
     endif;
   endif;
+
+on-exit;
+  // Restore the library list, also after an exception.
+  checkAndRestoreLibl(mustRestoreLibl: savedLibl);
 
 end-proc;
 
@@ -622,6 +621,7 @@ dcl-proc runProc export;
   end-pi;
 
   dcl-s assertCnt int(10);
+  dcl-ds excpMsg likeds(msg_t) inz;
   dcl-ds runtimeErrorEvent likeds(runtimeErrorEvent_t) inz;
   dcl-ds abstractTestEvent likeds(abstractTestEvent_t) inz;
   dcl-ds abstractTestEventUpdated likeds(abstractTestEvent_t) based(pAbstractTestEventUpdated);
@@ -635,20 +635,21 @@ dcl-proc runProc export;
     callProcByPtr(proc);
   on-error;
     if (testCaseResult.outcome = TEST_CASE_SUCCESS);
-      if (isRuntimeError());
+      excpMsg = rcvExcpMsgInfo();
+      abstractTestEvent = getAssertEventInternal();
+      if (not isAssertionEscape(excpMsg: abstractTestEvent));
         // Handle runtime error
         testCaseResult.outcome = TEST_CASE_ERROR;
         testCaseResult.lastErrorEvent = list_size(testCaseResult.hTestEvents) + 1;
         // Create runtime error event
         clear runtimeErrorEvent;
         runtimeErrorEvent.outcome = TEST_CASE_ERROR;
-        runtimeErrorEvent.msg = rcvExcpMsgInfo();
+        runtimeErrorEvent.msg = excpMsg;
 
         testCaseResult.lastErrorEvent =
           addErrorTestEvent(testCaseResult.hTestEvents: runtimeErrorEvent);
       else;
         // Handle failed assertion
-        abstractTestEvent = getAssertEventInternal();
         testCaseResult.lastFailureEvent = abstractTestEvent.index;
         testCaseResult.outcome = TEST_CASE_FAILURE;
 
@@ -670,6 +671,37 @@ dcl-proc runProc export;
   testCaseResult.assertCnt += assertCnt;
 
   return testCaseResult;
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// Returns *ON, if the exception message is the escape message of the
+// latest failed assertion (see ASSERT.doFail()). A failed assertion,
+// whose escape message has been monitored by the test, must not turn
+// a later runtime error into a failure.
+//----------------------------------------------------------------------
+dcl-proc isAssertionEscape;
+  dcl-pi *n ind extproc(*dclcase);
+    excpMsg           likeds(msg_t) const;
+    abstractTestEvent likeds(abstractTestEvent_t) const;
+  end-pi;
+
+  if (isRuntimeError());
+    return *off;
+  endif;
+
+  // The escape message of an assertion is CPF9897, sent by module
+  // PGMMSG (sndEscapeMsg() or sndEscapeMsgToProcedure()).
+  if (excpMsg.id <> 'CPF9897' or excpMsg.qSndStmt.qMod.nm <> 'PGMMSG');
+    return *off;
+  endif;
+
+  if (abstractTestEvent.outcome <> TEST_CASE_FAILURE or abstractTestEvent.index <= 0);
+    return *off;
+  endif;
+
+  return *on;
 
 end-proc;
 

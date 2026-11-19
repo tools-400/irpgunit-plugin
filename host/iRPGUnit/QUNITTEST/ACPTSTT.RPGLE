@@ -284,6 +284,26 @@ dcl-proc testError export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// Cobol test suite: a failed assertion is a failure, an escape
+// message of the system (CPF9801) is an error.
+//----------------------------------------------------------------------
+dcl-proc testCobolFailureAndError export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  if (TestSuite_isDirty('TESTPGM24': 'QTEMP'));
+    runCmd('RUCRTCBL TSTPGM(QTEMP/TESTPGM24) +
+            SRCFILE(QTESTCASES) DLTSPLF(*YES)');
+  endif;
+
+  run('RUCALLTST TESTPGM24 OUTPUT(*NONE)': errorExpected: '*ESCAPE': msgTxt);
+
+  aEqual('ERROR. 3 test cases, 2 assertions, 1 failure, 1 error.': msgTxt);
+
+end-proc;
+
+
 dcl-proc testStackTrace export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

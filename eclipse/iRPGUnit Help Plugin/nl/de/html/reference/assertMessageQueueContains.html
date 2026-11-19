@@ -4,27 +4,33 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<link rel="stylesheet" type="text/css" href="../stylesheet.css">
-	<title>assertMessageQueueContains (assert job log contains message)</title>
+	<title>assertMessageQueueContains (assert message queue contains message)</title>
 </head>
 
 <body>
-<h1>assertMessageQueueContains (assert job log contains message)</h1>
+<h1>assertMessageQueueContains (assert message queue contains message)</h1>
 <b>Syntax:</b>
 <p class="indent">
-<code>assertMessageQueueContains( userOrQueue : library : [msgId : [msgText : [msgHelp : timeLimit );</code>
+<code>assertMessageQueueContains( userOrQueue : library : msgId : msgText : msgHelp : sinceTime );</code>
 </p>
 <b>Beschreibung:</b>
 <p class="indent">
-Prüft, ob sich in einer gegebenen Nachrichtenwarteschlange eine spezielle Nachricht zwischen JETZT und
-<i>timeLimit</i> befindet. Die gesuchte Nachricht wird anhand einer Kombination aus ID, Nachrichtentext
-oder Hilfetext identifiziert. Nicht verwendete Auswahlparameter müssen ausgelassen werden. 
+Prüft, ob sich in einer gegebenen Nachrichtenwarteschlange eine Nachricht befindet, die seit <i>sinceTime</i>
+gesendet wurde. Die gesuchte Nachricht wird anhand einer Kombination aus ID, Nachrichtentext oder Hilfetext
+identifiziert und muss alle angegebenen Auswahlparameter erfüllen. Nicht verwendete Auswahlparameter müssen
+ausgelassen werden (<i>*omit</i>).
 </p>
 <p class="indent">
-Die Nachrichten-ID kann auch mit <i>*EMPTY</i>, um zu prüfen, ob die Nachrichtenwarteschlange leer ist. Alle
-weiteren Parameter müssen für diesen Fall ausgelassen werden.<br>
-Nachrichtentext und Hilfetext könnenals *generische* Zeichenkette angegeben werden.<br/>
-Der Wert für <i>timeLimit</i> sollte mit Hilfe der Funktion <a href="./getFullTimestamp.html">getFullTimeStamp()</a>
-gesetzt werden.
+<i>userOrQueue</i> und <i>library</i> geben die Nachrichtenwarteschlange an. Wird <i>library</i> ausgelassen,
+ist <i>userOrQueue</i> der Name eines Benutzerprofils, dessen Nachrichtenwarteschlange durchsucht wird.<br>
+Die Nachrichten-ID kann auch auf <i>*EMPTY</i> gesetzt werden, um zu prüfen, dass seit <i>sinceTime</i> keine
+Nachricht in die Nachrichtenwarteschlange gestellt wurde. Alle weiteren Auswahlparameter müssen für diesen Fall
+ausgelassen werden.<br>
+Nachrichtentext und Hilfetext können als generische Zeichenkette mit <i>*</i> am Anfang und/oder am Ende
+angegeben werden, z. B. <i>Order*</i>, <i>*processed</i> oder <i>*Order*</i>. Groß- und Kleinschreibung wird
+nicht unterschieden. Vom Hilfetext werden höchstens die ersten 4096 Zeichen verglichen.<br/>
+Nachrichten, die vor <i>sinceTime</i> gesendet wurden, werden ignoriert. Der Wert für <i>sinceTime</i> sollte
+mit Hilfe der Funktion <a href="./getFullTimestamp.html">getFullTimeStamp()</a> gesetzt werden.
 </p>
 <b>Funktionswert:</b>
 <p class="indent">
@@ -42,7 +48,7 @@ assertMessageQueueContains( 'QMSGQT' : 'QTEMP' : *omit : 'MSGQT - iRPGUnit' : *o
 <p>
 <code><pre class="indent">
 testStartTime = getFullTimeStamp();
-<span class="r-cmt">// Ausführen des Tests, nachdem die Nachrichtenwarteschlange leer sein soll</span>
+<span class="r-cmt">// Ausführen des Tests, der keine Nachricht in die Nachrichtenwarteschlange stellen soll</span>
 assertMessageQueueContains( 'QMSGQT' : 'QTEMP' : '*EMPTY' : *omit : *omit : testStartTime );
 </pre></code>
 </p>
