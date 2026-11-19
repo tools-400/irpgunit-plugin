@@ -34,5 +34,6 @@ end-pr;
 dcl-pr dltSplfs int(10) extproc('dltSplfs');
   splfNm  char(10) value;
   usrData char(10) value;
+  since   timestamp const options(*nopass);
 end-pr;
 

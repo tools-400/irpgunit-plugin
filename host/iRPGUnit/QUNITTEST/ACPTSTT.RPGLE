@@ -1074,6 +1074,45 @@ dcl-proc testDltSplFs export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// RUCRTRPG DLTSPLF(*YES) deletes the compile listings of its own run,
+// but keeps the other spooled files of the job.
+//----------------------------------------------------------------------
+dcl-proc testDltSplfOnlyOwnListings export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s testStart timestamp;
+
+  testStart = %timestamp();
+
+  // Setup: compile listings of another test program and a spooled
+  // file, that is not a compile listing.
+  runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM01) +
+          SRCFILE(QTESTCASES) DLTSPLF(*NO)');
+  crtSplf('KEEPME');
+
+  // Run.
+  runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM02) +
+          SRCFILE(QTESTCASES) DLTSPLF(*YES)');
+
+  // Check. dltSplfs() returns the number of deleted spooled files.
+  assert(dltSplfs('TESTPGM02': '': testStart) = 0
+         : 'DLTSPLF(*YES) must delete the compile listings.');
+  assert(dltSplfs('TESTPGM01': '': testStart) > 0
+         : 'DLTSPLF(*YES) must keep the compile listings of other programs.');
+  assert(dltSplfs('KEEPME': '': testStart) = 1
+         : 'DLTSPLF(*YES) must keep the other spooled files.');
+
+on-exit;
+  // Remove the spooled files of this test, also after a failed check.
+  dltSplfs('TESTPGM01': '': testStart);
+  dltSplfs('TESTPGM02': '': testStart);
+  dltSplfs('KEEPME': '': testStart);
+
+end-proc;
+
+
 dcl-proc testOptionsExact export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
@@ -1169,6 +1208,26 @@ dcl-proc run;
   if %parms >= 4;
     msgTxt = rcvMsgTxt( msgType );
   endif;
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// Creates a spooled file with the specified name in the current job.
+//----------------------------------------------------------------------
+dcl-proc crtSplf;
+  dcl-pi *n extproc(*dclcase);
+    splfNm varchar(10) const;
+  end-pi;
+
+  runCmd('OVRPRTF FILE(*PRTF) SPLFNAME(' + splfNm + ') OVRSCOPE(*JOB)');
+  monitor;
+    runCmd('DSPLIBL OUTPUT(*PRINT)');
+  on-error;
+    runCmd('DLTOVR FILE(*PRTF) LVL(*JOB)');
+    fail('Could not create spooled file ' + splfNm + '.');
+  endmon;
+  runCmd('DLTOVR FILE(*PRTF) LVL(*JOB)');
 
 end-proc;
 

@@ -128,6 +128,7 @@ dcl-proc dltSplfs export;
   dcl-pi *n int(10);
     splfNm  like(UsrNm_t) value;
     usrData char(10) value;
+    since   timestamp const options(*nopass);
   end-pi;
 
   dcl-ds hLister likeds(hSplfLister_t);
@@ -138,6 +139,9 @@ dcl-proc dltSplfs export;
 
   hLister = SplFLister_init('*': splFNm: usrData);
   // filterInfo.usrNm   = rtvJobUsrNm();
+  if (%parms() >= %parmnum(since));
+    SplFLister_setStartTime(hLister: since);
+  endif;
   SplFLister_list(hLister: %paddr('listSplfCallback'): %addr(userData));
 
   return userData.countDeleted;
