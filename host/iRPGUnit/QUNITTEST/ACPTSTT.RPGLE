@@ -32,6 +32,7 @@ ctl-opt NoMain Option(*SrcStmt);
 /include qinclude,SYSTEMAPI
 /include qunittest,SPLF_H
 /include qinclude,TYPES_H
+/include qinclude,STMF
 /include qinclude,TESTUTILS
 
 //----------------------------------------------------------------------
@@ -444,6 +445,38 @@ on-exit;
   runCmd('CHGJOB CCSID(*USRPRF)');
   monitor;
     runCmd('RMVLNK OBJLNK(''/tmp/' + name + ''')');
+  on-error;
+  endmon;
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// <TSTLIB> in XMLSTMF is replaced by the library of the test suite, also
+// if the test suite is called with *LIBL.
+//----------------------------------------------------------------------
+dcl-proc testXmlStmfTstLibWithLibl export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s prefix varchar(64);
+
+  if (TestSuite_isDirty('TESTPGM01': 'QTEMP'));
+    runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM01) +
+            SRCFILE(QTESTCASES) DLTSPLF(*YES)');
+  endif;
+
+  prefix = '/tmp/iRPGUnit_ACPTSTT_' + %char(sds.nbr) + '_';
+
+  run('RUCALLTST TESTPGM01 OUTPUT(*NONE) +
+       XMLSTMF(''' + prefix + '<TSTLIB>.xml'')');
+
+  assert(Stmf_exists(prefix + 'QTEMP.xml')
+         : 'XML file ' + prefix + 'QTEMP.xml not found.');
+
+on-exit;
+  monitor;
+    runCmd('RMVLNK OBJLNK(''' + prefix + 'QTEMP.xml'')');
   on-error;
   endmon;
 

@@ -111,6 +111,8 @@ dcl-proc validateXmlStmf export;
   dcl-s xmlStmfRpl like(i_xmlStmf);
   dcl-s dir like(i_xmlStmf);
   dcl-ds st_stat likeds(st_stat_t);
+  dcl-c UC 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  dcl-c LC 'abcdefghijklmnopqrstuvwxyz';
 
   // Validate replacement variables
   errMsg = validateReplacementVariables(i_xmlStmf);
@@ -141,6 +143,14 @@ dcl-proc validateXmlStmf export;
     errMsg = 'Not all replacement variables have been replaced. +
               Check parameter TSTPGM.';
     return errMsg;
+  endif;
+
+  // The library of a test suite given with *LIBL is known only, when
+  // the library list of the test has been set. Then runTestSuite()
+  // checks a directory with <TSTLIB> again.
+  if (i_testSuite.lib = '*LIBL'
+      and %scan('<TSTLIB>': %xlate(LC: UC: getDirectory(i_xmlStmf))) > 0);
+    return '';
   endif;
 
   // Ensure directory exists

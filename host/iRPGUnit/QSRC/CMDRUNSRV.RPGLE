@@ -129,6 +129,10 @@ dcl-proc runTestSuite export;
 
   dcl-ds xmlStmfInfo likeds(xmlStmfInfo_t) inz;
 
+  // Test suite with the library, that replaces <TSTLIB>.
+  dcl-ds qTestSuiteRslv likeds(object_t);
+  dcl-s testSuiteLib char(10);
+
   g_status.onFailure = onFailure;
   if (g_status.onFailure = ON_FAILURE_CONTINUE);
     g_status.isJUnitStyle = *off;
@@ -140,15 +144,7 @@ dcl-proc runTestSuite export;
 
   MemMgr_reset();
 
-  if (xmlStmf <> '');
-    msg = validateXmlStmf(xmlStmf: qTestSuite);
-    if (msg <> '');
-      sndEscapeMsgAboveCtlBdy( msg );
-    endif;
-  endif;
-
   clear xmlStmfInfo;
-  xmlStmfInfo.path = resolvePathVariables(xmlStmf: qTestSuite);
   xmlStmfInfo.type = xmlType;
 
   clear testSuiteResult;
@@ -165,6 +161,26 @@ dcl-proc runTestSuite export;
     raiseRUError( 'Error while loading test suite '
                 + Object_qName(qTestSuite) + '.' );
   endmon;
+
+  // The library of a test suite given with *LIBL is known, when the
+  // library list of the test has been set. It replaces <TSTLIB>.
+  if (xmlStmf <> '');
+    qTestSuiteRslv = qTestSuite;
+    if (qTestSuiteRslv.lib = '*LIBL');
+      testSuiteLib = Object_resolveLibrary(qTestSuite: '*SRVPGM');
+      if (testSuiteLib <> '');
+        qTestSuiteRslv.lib = testSuiteLib;
+      endif;
+    endif;
+
+    msg = validateXmlStmf(xmlStmf: qTestSuiteRslv);
+    if (msg <> '');
+      sndEscapeMsgAboveCtlBdy( msg );
+    endif;
+
+    xmlStmfInfo.path = resolvePathVariables(xmlStmf: qTestSuiteRslv);
+    setLogContext( qTestSuite : detail : output : xmlStmfInfo);
+  endif;
 
   if (testSuite.testCasesCnt = 0);
     raiseRUError( 'No test case found in service program '

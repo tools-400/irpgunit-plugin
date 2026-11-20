@@ -665,6 +665,25 @@ dcl-proc test_validateXmlStmf_tooLong export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// The library of a test suite given with *LIBL is known only, when the
+// library list of the test has been set. Hence a directory with
+// <TSTLIB> is not checked before.
+//----------------------------------------------------------------------
+dcl-proc test_validateXmlStmf_tstLibInDirWithLibl export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds qTestSuite likeds(object_t) inz;
+
+  qTestSuite.nm = 'MYTEST';
+  qTestSuite.lib = '*LIBL';
+
+  assertEqual('': validateXmlStmf('/tmp/<TSTLIB>/<TSTPGM>.xml': qTestSuite));
+
+end-proc;
+
+
 dcl-proc callProcWithErrorHandler;
   dcl-pi *N int(10) extproc(*dclcase);
     proc   likeds(proc_t) const;
