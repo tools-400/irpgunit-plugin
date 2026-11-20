@@ -138,7 +138,7 @@ dcl-proc crtTst export;
   if (isStmf(srcStmf));
 
     // Verify that the source stream file exists
-    localSrcStmf = %trim(%xlate('\': '/': srcStmf));
+    localSrcStmf = %trim(%xlate(%char(BACK_SLASH): '/': srcStmf));
     rc = stat(localSrcStmf: st_stat); // -1 = error, not found
     if (rc = -1);
       sndEscapeMsgAboveCtlBdy('Stream file not found: ' + localSrcStmf);

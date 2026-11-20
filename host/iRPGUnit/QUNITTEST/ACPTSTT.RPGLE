@@ -404,6 +404,52 @@ on-exit;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// RUCRTRPG replaces the backslash of the CCSID of the job in SRCSTMF
+// by a slash, also if the CCSID of the job (37) differs from the CCSID
+// of the iRPGUnit sources.
+//----------------------------------------------------------------------
+dcl-proc testCrtTstBackslashInCcsid37 export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds qSrcFile likeds(object_t);
+  dcl-s name varchar(64);
+  dcl-s cmd varchar(256);
+
+  qSrcFile.nm = 'QTESTCASES';
+  qSrcFile.lib = '*LIBL';
+  qSrcFile.lib = Object_resolveLibrary(qSrcFile: '*FILE');
+
+  name = 'iRPGUnit_ACPTSTT_BS_' + %char(sds.nbr) + '.rpgle';
+
+  runCmd('CPYTOSTMF FROMMBR(''/QSYS.LIB/' + %trim(qSrcFile.lib) +
+         '.LIB/QTESTCASES.FILE/TESTPGM01.MBR'') +
+          TOSTMF(''/tmp/' + name + ''') +
+          STMFOPT(*REPLACE) STMFCCSID(1208)');
+
+  // The CCSID of the job is used, when RUCRTRPG is activated.
+  runCmd('CHGJOB CCSID(37)');
+
+  // x'E0' is the backslash of CCSID 37.
+  cmd = 'RUCRTRPG TSTPGM(QTEMP/TESTPGMBS) +
+         SRCSTMF(''/tmp' + x'E0' + name + ''') +
+         TGTCCSID(*JOB) DLTSPLF(*YES)';
+  callp(e) qcmdexc(cmd: %len(cmd));
+  if (%error);
+    fail('RUCRTRPG: ' + %trimr(rcvMsgTxt('*ESCAPE')));
+  endif;
+
+on-exit;
+  runCmd('CHGJOB CCSID(*USRPRF)');
+  monitor;
+    runCmd('RMVLNK OBJLNK(''/tmp/' + name + ''')');
+  on-error;
+  endmon;
+
+end-proc;
+
+
 dcl-proc testStackTrace export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
