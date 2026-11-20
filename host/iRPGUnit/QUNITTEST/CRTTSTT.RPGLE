@@ -597,6 +597,34 @@ dcl-proc testModTargetRls export;
 
 end-proc;
 
+//----------------------------------------------------------------------
+// CRTCBLMOD creates the module in the library of the test suite, not
+// in the current library.
+//----------------------------------------------------------------------
+dcl-proc testCblModuleInTstPgmLib export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  crtCblModCmd = getCrtCblModCmd('SQLUDF    QTEMP     ':
+                                 'QCBLLESRC QSYSINC   ':
+                                 'SQLUDF':
+                                 noSrcStmf:
+                                 noCOption:
+                                 '*LIST':
+                                 noPOption:
+                                 noCompileOpt:
+                                 noCompilerParams:
+                                 '*CURRENT':
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTCBLMOD MODULE(QTEMP/*PGMID) +
+          SRCFILE(QSYSINC/QCBLLESRC) SRCMBR(SQLUDF) +
+          DBGVIEW(*LIST) TGTRLS(*CURRENT) TGTCCSID(*JOB)': crtCblModCmd);
+
+end-proc;
+
 dcl-proc testOneBndSrvPgm export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

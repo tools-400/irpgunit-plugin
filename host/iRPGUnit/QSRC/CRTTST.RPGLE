@@ -990,7 +990,13 @@ dcl-proc getCrtCblModCmd export;
   select;
   // CBLLE
   when (srcType = MBR_CBLLE);
-    cmd = 'CRTCBLMOD MODULE(*PGMID) ';
+    // Create the module in the library of the test suite, not in the
+    // current library.
+    if (startsWith('*': testpgm.lib) or testpgm.lib = '');
+      cmd = 'CRTCBLMOD MODULE(*PGMID) ';
+    else;
+      cmd = 'CRTCBLMOD MODULE(' + %trim(testpgm.lib) + '/*PGMID) ';
+    endif;
     if (isStmf(srcStmf));
       cmd += 'SRCSTMF(' + serializeStmfPath( srcStmf ) + ') ';
       cmd += serializeIncDir(incDir);
