@@ -243,7 +243,9 @@ end-pr;
 // @param msgId       - Message id to look for or '*EMPTY' (optional)
 // @param msgText     - Text of message to match (optional). Not case-sensitive.
 //                      Generic with '*' at the beginning and/or at the end,
-//                      e.g. 'Order*', '*processed' or '*Order*'.
+//                      e.g. 'Order*', '*processed' or '*Order*'. At most
+//                      the first 4096 characters of the message text are
+//                      compared.
 // @param msgHelp     - Help of message to match (optional). Same rules as for
 //                      'msgText'. At most the first 4096 characters of the
 //                      message help are compared.

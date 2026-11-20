@@ -839,6 +839,10 @@ dcl-proc assertMessageQueueContains export;
   // SECLVL allows 3000 characters, plus replacement data. Do not
   // exceed the length of String_t, the parameter type of compare().
   dcl-c MAX_MSG_HELP_LEN 4096;
+  // Maximum length of the message text compared with 'msgText'. The
+  // text of an impromptu message or with replacement data can be
+  // longer than 132 characters.
+  dcl-c MAX_MSG_LEN 4096;
 
   dcl-s checkMsgID       ind inz(*off);
   dcl-s checkMsgText     ind inz(*off);
@@ -894,6 +898,7 @@ dcl-proc assertMessageQueueContains export;
     checkCount += 1;
     fldSelect.fldCnt += 1;
     fldSelect.fldId(fldSelect.fldCnt) = LSTM_MSG_WITH_RPL_DATA;
+    fldSelect.maxMsgLen = MAX_MSG_LEN;
   endif;
 
   if (%parms() >= %parmnum(msgHelp) and %addr(msgHelp) <> *null);

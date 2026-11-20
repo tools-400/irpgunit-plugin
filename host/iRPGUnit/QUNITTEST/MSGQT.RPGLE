@@ -453,6 +453,32 @@ dcl-proc testLongMsgHelp export;
 end-proc;
 
 
+dcl-proc testLongMsgText export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s text varchar(256);
+
+  // Setup.
+
+  text = 'MSGQT - long message text';
+  dow (%len(text) < 190);
+    text += ' 0123456789';
+  enddo;
+  text += ' END-OF-TEXT';
+
+  sndQueueMsg(MSG_QUEUE_NM: MSG_QUEUE_LB: text);
+
+  // Run.
+
+  // The end marker is at the end of a message text of more than
+  // 132 characters.
+  assertMessageQueueContains(MSG_QUEUE_NM: MSG_QUEUE_LB:
+    *omit: '*END-OF-TEXT': *omit: testStartTime);
+
+end-proc;
+
+
 dcl-proc testManyMessagesInMessageQueue export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
