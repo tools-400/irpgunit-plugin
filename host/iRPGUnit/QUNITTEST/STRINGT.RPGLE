@@ -568,6 +568,46 @@ dcl-proc testCompare export;
   assert(result:
     'compare() must return TRUE, because both strings are empty');
 
+  result = compare( '*' : 'A');
+  assert(result:
+    'compare() must return TRUE, because a string of 1 character +
+     is not empty');
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+//   Test case of: isQuoted() and addQuotes() with a single quote
+//----------------------------------------------------------------------
+dcl-proc testSingleQuote export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  // A single quote is an apostrophe, not a quoted string.
+  assert(not isQuoted(QUOTE):
+         'A single quote must not be recognized as quoted string');
+
+  // Hence it gets quoted and doubled.
+  aEqual(QUOTE + QUOTE + QUOTE + QUOTE: addQuotes(QUOTE));
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+//   Test case of: bufferToStr()
+//----------------------------------------------------------------------
+dcl-proc testBufferToStr export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s buffer char(2) inz(x'C1F0');
+  dcl-s hex like(String_t);
+
+  hex = bufferToStr(%addr(buffer): %size(buffer));
+
+  iEqual(4: %len(hex));
+  aEqual('C1F0': hex);
+
 end-proc;
 
 //----------------------------------------------------------------------

@@ -286,7 +286,7 @@ dcl-proc compare export;
 
   select;
   when (state = T_ANY);
-    return %len(string) > 1;
+    return %len(string) > 0;
   when (state = T_GENERIC);
     return  contains( text : string );
   when (state = T_STARTSWITH);
@@ -309,7 +309,8 @@ dcl-proc isQuoted export;
     text  like(String_t) const options(*varsize);
   end-pi;
 
-  if %Len(text) = 0;
+  // A single quote is an apostrophe, not a quoted string.
+  if %Len(%TrimR(text)) < 2;
     return *OFF;
   endif;
 
@@ -758,7 +759,7 @@ dcl-proc bufferToStr export;
   cvthc(%addr(rtnValue.str_data_first_byte): pBuffer: size * 2);
   rtnValue.str_len = size * 2;
 
-  return rtnValue;
+  return rtnValue.string;
 
 end-proc;
 
