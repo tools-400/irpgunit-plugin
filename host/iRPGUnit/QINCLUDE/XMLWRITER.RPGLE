@@ -61,10 +61,14 @@ end-pr;
 //  Internal stuff.
 // ==========================================================================
 
+// The buffers must hold an escaped value: escapeXml() makes up to 6
+// characters of one character ('"' -> '&quot;'), and a logged value has
+// up to 2048 characters (logValue_t). Values passed to a CONST parameter
+// are cut to the length of the parameter.
 dcl-s xmlName_t varchar(100) template;
-dcl-s xmlValue_t varchar(500) template;
-dcl-s xmlBuffer_t varchar(3000) template;
-dcl-s xmlBufferLarge_t varchar(10000) template;
+dcl-s xmlValue_t varchar(12288) template;
+dcl-s xmlBuffer_t varchar(16384) template;
+dcl-s xmlBufferLarge_t varchar(32768) template;
 
 dcl-ds xmlWriter_t qualified template;
   xmlType       like(xmlType_t);

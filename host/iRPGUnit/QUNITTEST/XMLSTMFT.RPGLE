@@ -664,6 +664,50 @@ dcl-proc testVSCode1DiagMsgNoValues export;
 end-proc;
 
 //----------------------------------------------------------------------
+// Tests the XML output of: *VSCODE1
+// A value of more than 500 characters is written completely.
+//----------------------------------------------------------------------
+dcl-proc testVSCode1LongValue export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  runTestPgm25('testLongValue': '*VSCODE1': NO_ERROR);
+
+  assert(isWellFormed(g_status.tmpName): 'The XML file is not well-formed.');
+  assert(%scan(toUtf8('END_OF_LONG_VALUE'): readUtf8File(g_status.tmpName)) > 0
+         : 'The end of the long value is missing in the XML file.');
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Tests the XML output of: *VSCODE1
+// A long value with many characters, that must be escaped.
+//----------------------------------------------------------------------
+dcl-proc testVSCode1QuotedValue export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  runTestPgm25('testQuotedValue': '*VSCODE1': NO_ERROR);
+
+  assert(isWellFormed(g_status.tmpName): 'The XML file is not well-formed.');
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Tests the XML output of: *JENKINS1
+// A long failure message with many characters, that must be escaped.
+//----------------------------------------------------------------------
+dcl-proc testJenkins1QuotedMessage export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  runTestPgm25('testQuotedMessage': '*JENKINS1': ERROR_EXPECTED);
+
+  assert(isWellFormed(g_status.tmpName): 'The XML file is not well-formed.');
+
+end-proc;
+
+//----------------------------------------------------------------------
 // Validates the test results of *JENKINS1 and *JENKINS2 (*ABORT)
 //----------------------------------------------------------------------
 dcl-proc validateJenkinsAbort;
@@ -1064,5 +1108,127 @@ dcl-proc parseXml;
   xml-sax %handler(SAX_CallbackHandler: testSuite) %XML(path: 'doc=file');
 
   return testSuite;
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Runs a test of fixture TESTPGM25 with RUCALLTST and writes the XML
+// file 'xmlStmf' (default: g_status.tmpName).
+//----------------------------------------------------------------------
+dcl-proc runTestPgm25;
+  dcl-pi *n extproc(*dclcase);
+    testProc      varchar(32) const;
+    xmlType       varchar(10) const;
+    errorExpected ind const;
+    xmlStmf       varchar(64) const options(*nopass);
+  end-pi;
+
+  dcl-s cmd varchar(512);
+  dcl-s msgTxt char(256);
+
+  if (TestSuite_isDirty('TESTPGM25': 'QTEMP'));
+    runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM25) +
+            SRCFILE(QTESTCASES) DLTSPLF(*YES)');
+  endif;
+
+  cmd = 'RUCALLTST TSTPGM(QTEMP/TESTPGM25) TSTPRC(' + testProc + ') +
+         XMLTYPE(' + xmlType + ') XMLSTMF(''';
+  if (%parms() >= %parmnum(xmlStmf));
+    cmd += xmlStmf + ''')';
+  else;
+    cmd += g_status.tmpName + ''')';
+  endif;
+
+  saveAssertStatus();
+
+  if (errorExpected);
+    run(cmd: ERROR_EXPECTED: '*ESCAPE': msgTxt);
+  else;
+    run(cmd);
+  endif;
+
+on-exit;
+  restoreAssertStatus();
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Returns *on, if the XML parser of RPG reads the file without error.
+//----------------------------------------------------------------------
+dcl-proc isWellFormed;
+  dcl-pi *n ind extproc(*dclcase);
+    path varchar(1024) const;
+  end-pi;
+
+  dcl-s isError char(1) inz(' ');
+
+  monitor;
+    xml-sax %handler(xmlCheckHandler: isError) %xml(path: 'doc=file');
+  on-error;
+    return *off;
+  endmon;
+
+  return (isError <> 'E');
+
+end-proc;
+
+//----------------------------------------------------------------------
+// XML-SAX handler of isWellFormed(): remembers a parser error.
+//----------------------------------------------------------------------
+dcl-proc xmlCheckHandler;
+  dcl-pi *n int(10) extproc(*dclcase);
+    isError     char(1);
+    event       int(10) value;
+    pString     pointer value;
+    stringLen   int(20) value;
+    exceptionId int(10) value;
+  end-pi;
+
+  if (event = *XML_EXCEPTION);
+    isError = 'E';
+  endif;
+
+  return 0;
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Returns the contents of a UTF-8 file as UTF-8 string.
+//----------------------------------------------------------------------
+dcl-proc readUtf8File;
+  dcl-pi *n varchar(65535) ccsid(*utf8) extproc(*dclcase);
+    path varchar(1024) const;
+  end-pi;
+
+  dcl-s buffer char(65535) ccsid(*utf8);
+  dcl-s fd int(10);
+  dcl-s len int(10);
+
+  fd = open(path: O_RDONLY);
+  if (fd < 0);
+    fail('Could not open file ' + path + '.');
+  endif;
+
+  len = read(fd: %addr(buffer): %size(buffer));
+  callp close(fd);
+
+  if (len <= 0);
+    return '';
+  endif;
+
+  return %subst(buffer: 1: len);
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Returns a given text as UTF-8 string, for searching in the
+// contents of readUtf8File().
+//----------------------------------------------------------------------
+dcl-proc toUtf8;
+  dcl-pi *n varchar(100) ccsid(*utf8) extproc(*dclcase);
+    text varchar(100) const;
+  end-pi;
+
+  return text;
 
 end-proc;
