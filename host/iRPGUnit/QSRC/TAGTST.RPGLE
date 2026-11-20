@@ -70,12 +70,14 @@ dcl-proc tagTstSrvPgm export;
   objInfo.attribute = 'RPGUNIT';
   qlicobjd(rtnLib : qsrvpgm : '*SRVPGM' : objInfo : errorCode);
 
-  // Change: source file and member
-  objInfo.keys = 1;
-  objInfo.type = 1;
-  objInfo.length = 30;
-  objInfo.attribute = qsrcfile + srcMbr;
-  qlicobjd(rtnLib : qsrvpgm : '*SRVPGM' : objInfo : errorCode);
+  // Change: source file and member, not for stream files
+  if (not isStmf(srcStmf));
+    objInfo.keys = 1;
+    objInfo.type = 1;
+    objInfo.length = 30;
+    objInfo.attribute = qsrcfile + srcMbr;
+    qlicobjd(rtnLib : qsrvpgm : '*SRVPGM' : objInfo : errorCode);
+  endif;
 
   // Retrieve source member last changed date and time
   // TODO: fix for stream files

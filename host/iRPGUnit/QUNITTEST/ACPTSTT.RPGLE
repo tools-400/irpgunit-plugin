@@ -28,6 +28,7 @@ ctl-opt NoMain Option(*SrcStmt);
 /include qinclude,LIBL
 /include qinclude,OBJECT
 /include qinclude,PGMMSG
+/include qinclude,SDS
 /include qinclude,SYSTEMAPI
 /include qunittest,SPLF_H
 /include qinclude,TYPES_H
@@ -356,6 +357,49 @@ dcl-proc testLongExportName export;
   if (%error);
     fail('TESTPGM27: ' + %trimr(rcvMsgTxt('*ESCAPE')));
   endif;
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// A test suite created from a stream file is not tagged with a source
+// member, that has not been used. Hence TestSuite_isDirty() works.
+//----------------------------------------------------------------------
+dcl-proc testStmfTestSuiteTag export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds qSrcFile likeds(object_t);
+  dcl-s stmf varchar(64);
+  dcl-s isDirty ind;
+
+  qSrcFile.nm = 'QTESTCASES';
+  qSrcFile.lib = '*LIBL';
+  qSrcFile.lib = Object_resolveLibrary(qSrcFile: '*FILE');
+
+  stmf = '/tmp/iRPGUnit_ACPTSTT_' + %char(sds.nbr) + '.rpgle';
+
+  runCmd('CPYTOSTMF FROMMBR(''/QSYS.LIB/' + %trim(qSrcFile.lib) +
+         '.LIB/QTESTCASES.FILE/TESTPGM01.MBR'') +
+          TOSTMF(''' + stmf + ''') +
+          STMFOPT(*REPLACE) STMFCCSID(1208)');
+
+  // A UTF-8 source cannot be compiled with TGTCCSID(*SRC).
+  runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGMSF) +
+          SRCSTMF(''' + stmf + ''') TGTCCSID(*JOB) DLTSPLF(*YES)');
+
+  monitor;
+    isDirty = TestSuite_isDirty('TESTPGMSF': 'QTEMP');
+  on-error;
+    fail('TestSuite_isDirty() failed for a test suite +
+          created from a stream file.');
+  endmon;
+
+on-exit;
+  monitor;
+    runCmd('RMVLNK OBJLNK(''' + stmf + ''')');
+  on-error;
+  endmon;
 
 end-proc;
 
