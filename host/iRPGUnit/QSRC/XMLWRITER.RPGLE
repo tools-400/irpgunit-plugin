@@ -453,7 +453,7 @@ dcl-proc escapeXml export;
 
   dcl-s escaped varchar(100000);
 
-  escaped = xml;
+  escaped = replaceInvalidXmlChars(xml);
 
   escaped = %scanrpl('&' : '&amp;' : escaped);
   escaped = %scanrpl('"' : '&quot;' : escaped);
@@ -462,6 +462,65 @@ dcl-proc escapeXml export;
   escaped = %scanrpl('>' : '&gt;' : escaped);
 
   return escaped;
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Prepares a given value for a CDATA section: replaces the characters,
+// that XML does not allow, and splits the end of a CDATA section
+// (']]>' -> ']]' + ']]>' + '<![CDATA[' + '>').
+//----------------------------------------------------------------------
+dcl-proc escapeCData export;
+  dcl-pi *n like(xmlBuffer_t);
+    text like(xmlBuffer_t) options(*varsize) const;
+  end-pi;
+
+  dcl-s escaped like(xmlBuffer_t);
+
+  escaped = replaceInvalidXmlChars(text);
+
+  escaped = %scanrpl(g.END_CDATA
+                     : %subst(g.END_CDATA: 1: 2) + g.END_CDATA
+                       + g.START_CDATA + %subst(g.END_CDATA: 3: 1)
+                     : escaped);
+
+  return escaped;
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Replaces the characters, that XML 1.0 does not allow, by '.': the
+// control characters x'00' - x'3F' of EBCDIC, e.g. of a packed field
+// compared with aEqual(). Kept are TAB, CR, LF and the shift
+// characters SO and SI of DBCS data.
+//----------------------------------------------------------------------
+dcl-proc replaceInvalidXmlChars;
+  dcl-pi *n like(xmlBuffer_t) extproc(*dclcase);
+    text like(xmlBuffer_t) options(*varsize) const;
+  end-pi;
+
+  dcl-c TAB x'05';
+  dcl-c CR x'0D';
+  dcl-c SO x'0E';
+  dcl-c SI x'0F';
+  dcl-c LF x'25';
+  dcl-c FIRST_PRINTABLE x'40';
+
+  dcl-s result like(xmlBuffer_t);
+  dcl-s char char(1);
+  dcl-s i int(10);
+
+  result = text;
+
+  for i = 1 to %len(result);
+    char = %subst(result: i: 1);
+    if (char < FIRST_PRINTABLE and char <> TAB and char <> CR
+        and char <> LF and char <> SO and char <> SI);
+      %subst(result: i: 1) = '.';
+    endif;
+  endfor;
+
+  return result;
 
 end-proc;
 

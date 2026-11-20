@@ -109,6 +109,14 @@ dcl-pr escapeXml like(xmlBuffer_t) extproc('XMLWRITER_escapeXml');
 end-pr;
 
 ///
+// Prepares a given value for a CDATA section: replaces the characters,
+// that XML does not allow, and splits the end of a CDATA section.
+///
+dcl-pr escapeCData like(xmlBuffer_t) extproc('XMLWRITER_escapeCData');
+  text like(xmlBuffer_t) options(*varsize) const;
+end-pr;
+
+///
 // Returns the name of the assertion depending of the test case type.
 ///
 dcl-pr getAssertProcName like(procNm_t) extproc('XML_WRITER_getAssertProcName');

@@ -733,6 +733,67 @@ on-exit;
 end-proc;
 
 //----------------------------------------------------------------------
+// Tests the XML output of: *VSCODE1
+// Control characters, that XML does not allow, e.g. of packed or binary
+// fields compared with aEqual(), give a well-formed file.
+//----------------------------------------------------------------------
+dcl-proc testVSCode1ControlCharacters export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  writeFailureXml(XML_TYPE_VSCODE_1: *off: *off: 'A' + x'00' + 'B'
+                  : 'C' + x'1F' + 'D': 'testDiagnosticMessages');
+
+  assert(isWellFormed(g_status.tmpName): 'The XML file is not well-formed.');
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Tests the XML output of: *JENKINS2
+// The end of a CDATA section (']]>') in a value does not end the CDATA
+// section of the failure.
+//----------------------------------------------------------------------
+dcl-proc testJenkins2CDataEnd export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  writeFailureXml(XML_JENKINS_TYPE_2: *off: *off: '<![CDATA[x]]>': 'y'
+                  : 'testDiagnosticMessages');
+
+  assert(isWellFormed(g_status.tmpName): 'The XML file is not well-formed.');
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Tests the XML output of: *VSCODE1
+// Characters, that must be escaped, in a procedure of the call stack,
+// e.g. of a C++ operator.
+//----------------------------------------------------------------------
+dcl-proc testVSCode1CallstackEscaped export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-c PROC_NAME 'operator<<(Stream&, "x")';
+
+  dcl-ds testSuite likeds(saxTestSuite_t) inz(*likeds);
+  dcl-ds testCase likeds(saxTestCase_t) inz(*likeds);
+  dcl-ds testCaseEvent likeds(saxAbstractTestCaseEvent_t) inz(*likeds);
+  dcl-ds callstackEntry likeds(saxCallstackEntry_t) inz(*likeds);
+
+  writeFailureXml(XML_TYPE_VSCODE_1: *off: *off: 'Donald Duck': 'Dagobert Duck'
+                  : PROC_NAME);
+
+  assert(isWellFormed(g_status.tmpName): 'The XML file is not well-formed.');
+
+  testSuite = parseXml(g_status.tmpName);
+  testCase = getTestcase(testSuite.testcases: 1);
+  testCaseEvent = getTestCaseEvent(testCase.events: 1);
+  callstackEntry = getCallstackEntry(testCaseEvent.failure.callstack: 1);
+  assertEqual(PROC_NAME: callstackEntry.attr_procedure);
+
+end-proc;
+
+//----------------------------------------------------------------------
 // Validates the test results of *JENKINS1 and *JENKINS2 (*ABORT)
 //----------------------------------------------------------------------
 dcl-proc validateJenkinsAbort;
@@ -1008,6 +1069,29 @@ dcl-proc writeVSCodeFailure;
     isNoActualValue   ind const;
   end-pi;
 
+  writeFailureXml(XML_TYPE_VSCODE_1: isNoExpectedValue: isNoActualValue
+                  : 'Donald Duck': 'Dagobert Duck': 'testDiagnosticMessages');
+
+  return parseXml(g_status.tmpName);
+
+end-proc;
+
+//----------------------------------------------------------------------
+// Writes an XML file of type 'xmlType' with 1 failed test case. The
+// test case has 1 failure event, whose 'expected' or 'actual' value or
+// both values can be missing. The call stack has 1 entry with
+// procedure 'procNm'.
+//----------------------------------------------------------------------
+dcl-proc writeFailureXml;
+  dcl-pi *n extproc(*dclcase);
+    xmlType           like(xmlType_t) const;
+    isNoExpectedValue ind const;
+    isNoActualValue   ind const;
+    expectedValue     varchar(256) const;
+    actualValue       varchar(256) const;
+    procNm            varchar(256) const;
+  end-pi;
+
   dcl-c DIAG_TEST_CASE_NAME 'testDiagnosticMessages';
   dcl-c DIAG_EVENTS_TEXT 'XMLSTMFT.hTestEvents';
   dcl-c DIAG_RESULTS_TEXT 'XMLSTMFT.testResults';
@@ -1034,7 +1118,7 @@ dcl-proc writeVSCodeFailure;
   pCallstk = Callstack_alloc(1: DIAG_CALLSTACK_TEXT);
   callstkEnt.qStmt.qPgm = testSuite.qName;
   callstkEnt.qStmt.qMod = testSuite.qName;
-  callstkEnt.qStmt.procNm = DIAG_TEST_CASE_NAME;
+  callstkEnt.qStmt.procNm = procNm;
   callstkEnt.qStmt.specNb = '100';
   Callstack_addEntry(pCallstk: callstkEnt);
 
@@ -1044,8 +1128,8 @@ dcl-proc writeVSCodeFailure;
   testEvent.failure.msg = 'Assertion failed.';
   testEvent.failure.isConfirmed = *on;
   testEvent.failure.pCallstk = pCallstk;
-  testEvent.failure.logExpected = crtLogValue(isNoExpectedValue: 'Donald Duck');
-  testEvent.failure.logActual = crtLogValue(isNoActualValue: 'Dagobert Duck');
+  testEvent.failure.logExpected = crtLogValue(isNoExpectedValue: expectedValue);
+  testEvent.failure.logActual = crtLogValue(isNoActualValue: actualValue);
   list_add(testCaseResult.hTestEvents: %addr(testEvent): %size(testEvent));
 
   list_add(testSuite.testResults: %addr(testCaseResult): %size(testCaseResult));
@@ -1055,9 +1139,7 @@ dcl-proc writeVSCodeFailure;
   testSuiteResult.failureCnt = 1;
 
   writeXmlFile(g_status.tmpName: testSuite: testSuite.qName: testSuiteResult
-               : XML_TYPE_VSCODE_1: ON_FAILURE_ABORT: *on);
-
-  return parseXml(g_status.tmpName);
+               : xmlType: ON_FAILURE_ABORT: *on);
 
 on-exit;
   if (testCaseResult.hTestEvents <> *null);

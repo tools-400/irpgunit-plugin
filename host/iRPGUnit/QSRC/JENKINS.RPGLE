@@ -305,7 +305,7 @@ dcl-proc Jenkins_writeCallStackAsTextV2;
   Callstack_resetIteration(pCallstk);
   dow (Callstack_getNext(pCallstk: callstkEnt));
     // example: iEqual (RUTESTCASE->ASSERT:124)
-    text = TAB_TEXT + buildCallstackEntry(callstkEnt) + CRLF;
+    text = TAB_TEXT + escapeCData(buildCallstackEntry(callstkEnt)) + CRLF;
     appendToXmlFile(text);
   enddo;
 
@@ -350,7 +350,7 @@ dcl-proc Jenkins_writeLogValueAsText;
   text = formattedName + ':' + CRLF;
   appendToXmlFile(text);
 
-  text = '  ' + logValue.value + CRLF;
+  text = '  ' + escapeCData(logValue.value) + CRLF;
   appendToXmlFile(text);
 
 end-proc;

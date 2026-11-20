@@ -278,12 +278,12 @@ dcl-proc VSCode_writeCallstackEntry;
   g_xmlWriter.indLvl += 1;
 
   text = indent() + '<' + elementName;
-  text += ' program="' + %trim(qStmt.qPgm.nm) + '"';
-  text += ' programLibrary="' + %trim(qStmt.qPgm.lib) + '"';
-  text += ' module="' + %trim(qStmt.qMod.nm) + '"';
-  text += ' moduleLibrary="' + %trim(qStmt.qMod.lib) + '"';
-  text += ' procedure="' + %trim(qStmt.procNm) + '"';
-  text += ' line="' + %trim(qStmt.specNb) + '"';
+  text += ' program="' + escapeXml(%trim(qStmt.qPgm.nm)) + '"';
+  text += ' programLibrary="' + escapeXml(%trim(qStmt.qPgm.lib)) + '"';
+  text += ' module="' + escapeXml(%trim(qStmt.qMod.nm)) + '"';
+  text += ' moduleLibrary="' + escapeXml(%trim(qStmt.qMod.lib)) + '"';
+  text += ' procedure="' + escapeXml(%trim(qStmt.procNm)) + '"';
+  text += ' line="' + escapeXml(%trim(qStmt.specNb)) + '"';
   text += '/>' + newLine();
 
   appendToXmlFile(text);
