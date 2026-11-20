@@ -514,6 +514,7 @@
    "DLTMOD MODULE("_prdLib"/SAX)"
    "DLTMOD MODULE("_prdLib"/SPLF)"
    "DLTMOD MODULE("_prdLib"/SRCMBR)"
+   "DLTMOD MODULE("_prdLib"/SRCMBRT)"
    "DLTMOD MODULE("_prdLib"/STMF)"
    "DLTMOD MODULE("_prdLib"/STMFT)"
    "DLTMOD MODULE("_prdLib"/STRING)"
