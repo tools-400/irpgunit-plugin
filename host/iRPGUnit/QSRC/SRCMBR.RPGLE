@@ -150,7 +150,9 @@ dcl-proc SrcMbr_getModSrc export;
       if (count = 1);
         pModule = g_pModList + g_modList.listoffs;
       else;
-        pModule += g_modList.entSize;
+        // The entries have variable length. The list header reports
+        // an entry size of 0.
+        pModule += module.lenEntry;
       endif;
 
       if (module.ofsSrcStmf > 0);

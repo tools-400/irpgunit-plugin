@@ -121,3 +121,32 @@ dcl-proc testGetCcsid_srcFile export;
 
 end-proc;
 
+//----------------------------------------------------------------------
+// Finds the source of a module, that is not the first module of a
+// service program. The entries of the module list have variable
+// length.
+//----------------------------------------------------------------------
+dcl-proc testGetModSrc_laterModule export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds qSrvPgm likeds(object_t) inz;
+  dcl-ds qMod likeds(object_t) inz;
+  dcl-ds srcInf likeds(srcInf_t) inz;
+
+  // RUTESTCASE is created from modules ASSERT, ASSERTV2, TESTUTILS,
+  // VERSION and the modules of binding directory IRPGUNIT.
+  qSrvPgm.nm = 'RUTESTCASE';
+  qSrvPgm.lib = sds.pgmLib;
+  qMod.nm = 'VERSION';
+  qMod.lib = '*LIBL';
+
+  SrcMbr_initialize();
+  srcInf = SrcMbr_getModSrc(qSrvPgm: qMod);
+
+  assertEqual(TYPE_MEMBER: srcInf.type);
+  assertEqual('QSRC': srcInf.mbr.file);
+  assertEqual('VERSION': srcInf.mbr.mbr);
+
+end-proc;
+
