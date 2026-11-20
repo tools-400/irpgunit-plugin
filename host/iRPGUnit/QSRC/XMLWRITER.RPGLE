@@ -114,6 +114,13 @@ dcl-proc writeXmlFile export;
     sndEscapeMsgAboveCtlBdy('''g_xmlWriter.indLvl'' must be 0.');
   endif;
 
+on-exit;
+  // Close the file also after an exception.
+  if (g_hFile >= 0);
+    callp close(g_hFile);
+    g_hFile = -1;
+  endif;
+
 end-proc;
 
 //----------------------------------------------------------------------
