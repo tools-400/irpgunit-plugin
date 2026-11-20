@@ -635,8 +635,8 @@ dcl-proc crtCblMod;
 end-proc;
 
 
-dcl-proc deleteModulesAndSpooledFiles;
-  dcl-pi *n extproc(*dclcase);
+dcl-proc deleteModulesAndSpooledFiles export;
+  dcl-pi *n;
     dltSplf   ind const;
     dltMod    ind const;
     startTime timestamp const;
@@ -655,7 +655,11 @@ dcl-proc deleteModulesAndSpooledFiles;
   for i = 1 to modules.size;
     if (dltMod);
       cmd = getDltModCmd( modules.object(i) );
-      qcmdexc(cmd: %len(cmd));
+      monitor;
+        qcmdexc(cmd: %len(cmd));
+      on-error;
+        // Delete the other modules and the compile listings anyway.
+      endmon;
     endif;
   endfor;
 

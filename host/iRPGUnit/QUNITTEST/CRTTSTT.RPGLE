@@ -30,6 +30,7 @@ ctl-opt nomain option(*srcstmt);
 /copy qinclude,LIBC_H
 /copy qinclude,LIBL
 /copy qinclude,CRTTST
+/copy qinclude,OBJECT
 /copy qinclude,TYPES_H
 
 //----------------------------------------------------------------------
@@ -1200,6 +1201,48 @@ dcl-proc testDbgViewSqlRpgle export;
           DBGVIEW(*LIST) +
           CVTCCSID(*JOB) +
           COMPILEOPT(''TGTCCSID(*JOB)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// A module that cannot be deleted does not keep the other modules.
+//----------------------------------------------------------------------
+dcl-proc testDltModAfterDltModError export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds testPgm likeds(object_t);
+  dcl-ds modules likeds(objectArray_t);
+
+  // Setup.
+
+  clear testPgm;
+  clear modules;
+  modules.size = 2;
+  modules.object(1).nm = 'RUNOTEXIST';
+  modules.object(1).lib = 'QTEMP';
+  modules.object(2).nm = 'RUDLTMOD';
+  modules.object(2).lib = 'QTEMP';
+
+  system('DLTMOD MODULE(QTEMP/RUDLTMOD)');
+  system('CRTDUPOBJ OBJ(CRTTST) FROMLIB(*LIBL) OBJTYPE(*MODULE) +
+          TOLIB(QTEMP) NEWOBJ(RUDLTMOD)');
+  assert(Object_exists(modules.object(2): '*MODULE')
+         : 'Module QTEMP/RUDLTMOD has not been created.');
+
+  // Run.
+
+  monitor;
+    deleteModulesAndSpooledFiles(*off: *on: %timestamp(): testPgm: modules);
+  on-error;
+    // Checked below: the second module must be deleted anyway.
+  endmon;
+
+  // Check.
+
+  assert(not Object_exists(modules.object(2): '*MODULE')
+         : 'Module QTEMP/RUDLTMOD has not been deleted.');
 
 end-proc;
 

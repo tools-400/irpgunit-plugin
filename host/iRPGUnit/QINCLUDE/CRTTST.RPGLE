@@ -197,4 +197,24 @@ dcl-pr serializeObjectName varchar(21) extproc('CRTTST_serializeObjectName');
   object likeds(object_t) const;
 end-pr;
 
+///
+// Deletes the created modules and the compile listings of the test
+// program. A module that cannot be deleted does not keep the other
+// modules and the compile listings.
+//
+// @param dltSplf   - *ON = delete the compile listings
+// @param dltMod    - *ON = delete the modules
+// @param startTime - Start of the compilation; older spooled files are kept
+// @param testPgm   - Test program, whose compile listings are deleted
+// @param modules   - Created modules
+///
+dcl-pr deleteModulesAndSpooledFiles
+       extproc('CRTTST_deleteModulesAndSpooledFiles');
+  dltSplf   ind const;
+  dltMod    ind const;
+  startTime timestamp const;
+  testPgm   likeds(object_t) const;
+  modules   likeds(objectArray_t) const;
+end-pr;
+
 /endif
