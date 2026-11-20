@@ -105,11 +105,7 @@ dcl-proc SplfLister_init export;
   hLister.filterInfo.lenPrtDevNm = %size(OSPF0200_prtDevNameE_t);
   hLister.filterInfo.frmType = FRMTYPE_ALL;
 
-  if (usrDta <> USRDTA_ALL);
-    hLister.filterInfo.usrSpcDta = usrDta;
-  else;
-    hLister.filterInfo.usrSpcDta = splfNm;
-  endif;
+  hLister.filterInfo.usrSpcDta = usrDta;
 
   hLister.filterInfo.sysNm = SYSTEM_CURRENT;
   hLister.filterInfo.strSplfCrtDt = CRT_DATE_ALL;
