@@ -124,7 +124,11 @@ dcl-proc MemMgr_alloc export;
 
   pMemory = hAlloc.pExt;
 
-  sndPlainDbgMsg(crtDbgMsg('Alloc memory: ': i_msg: pMemory));
+  if (%parms() >= %parmnum(i_msg) and %addr(i_msg) <> *null);
+    sndPlainDbgMsg(crtDbgMsg('Alloc memory: ': i_msg: pMemory));
+  else;
+    sndPlainDbgMsg(crtDbgMsg('Alloc memory: ': *omit: pMemory));
+  endif;
 
   return pMemory;
 
@@ -143,7 +147,11 @@ dcl-proc MemMgr_dealloc export;
   dcl-s sizeReq int(20);
   dcl-ds hAlloc likeds(hAlloc_t) based(pBase);
 
-  sndPlainDbgMsg(crtDbgMsg('Dealloc memory: ': i_msg: io_pMemory));
+  if (%parms() >= %parmnum(i_msg) and %addr(i_msg) <> *null);
+    sndPlainDbgMsg(crtDbgMsg('Dealloc memory: ': i_msg: io_pMemory));
+  else;
+    sndPlainDbgMsg(crtDbgMsg('Dealloc memory: ': *omit: io_pMemory));
+  endif;
 
   if (io_pMemory = *null);
     sndEscapeMsgAboveCtlBdy('Dealloc: Cannot deallocate a *NULL pointer.');
@@ -234,7 +242,11 @@ dcl-proc MemMgr_createList export;
 
   hList = list_create();
 
-  sndPlainDbgMsg(crtDbgMsg('Create list: ': i_msg: hList));
+  if (%parms() >= %parmnum(i_msg) and %addr(i_msg) <> *null);
+    sndPlainDbgMsg(crtDbgMsg('Create list: ': i_msg: hList));
+  else;
+    sndPlainDbgMsg(crtDbgMsg('Create list: ': *omit: hList));
+  endif;
 
   return hList;
 
@@ -249,7 +261,11 @@ dcl-proc MemMgr_disposeList export;
     i_msg    varchar(64) options(*nopass: *omit) const;
   end-pi;
 
-  sndPlainDbgMsg(crtDbgMsg('Dispose list: ': i_msg: io_hList));
+  if (%parms() >= %parmnum(i_msg) and %addr(i_msg) <> *null);
+    sndPlainDbgMsg(crtDbgMsg('Dispose list: ': i_msg: io_hList));
+  else;
+    sndPlainDbgMsg(crtDbgMsg('Dispose list: ': *omit: io_hList));
+  endif;
 
   if (io_hList = *null);
     sndEscapeMsgAboveCtlBdy('Dispose list: Cannot deallocate *NULL pointer.');
@@ -285,7 +301,7 @@ end-proc;
 dcl-proc crtDbgMsg;
   dcl-pi *n varchar(128) extproc(*dclcase);
     i_prefix  varchar(64) const;
-    i_msg     varchar(64) const;
+    i_msg     varchar(64) options(*omit) const;
     i_pointer pointer const;
   end-pi;
 

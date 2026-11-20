@@ -51,7 +51,11 @@ dcl-proc Callstack_alloc export;
   dcl-s size int(10);
 
   size = getSize(numE);
-  pCallstk = MemMgr_alloc(size: msg);
+  if (%parms() >= %parmnum(msg) and %addr(msg) <> *null);
+    pCallstk = MemMgr_alloc(size: msg);
+  else;
+    pCallstk = MemMgr_alloc(size);
+  endif;
   callstk.header.id = CALLSTACK_ID;
   callstk.header.iteration = -1;
   callstk.header.numE = 0;
@@ -72,7 +76,11 @@ dcl-proc Callstack_dealloc export;
     msg      varchar(64) options(*nopass: *omit) const;
   end-pi;
 
-  MemMgr_dealloc(pCallstk: msg);
+  if (%parms() >= %parmnum(msg) and %addr(msg) <> *null);
+    MemMgr_dealloc(pCallstk: msg);
+  else;
+    MemMgr_dealloc(pCallstk);
+  endif;
 
 end-proc;
 
