@@ -14,7 +14,7 @@ end-pr;
 //    in the place to store the returned structure result.
 dcl-pr localtime_r pointer extproc('localtime_r');
   time   int(10) const;
-  tm     likeds(tm_t) const;
+  tm     likeds(tm_t);
 end-pr;
 
 dcl-ds tm_t qualified  template;

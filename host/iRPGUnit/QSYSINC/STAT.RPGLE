@@ -1,6 +1,6 @@
 **FREE
 /IF NOT DEFINED(STAT)
-/DEFINE START
+/DEFINE STAT
 
 /include qsysinc,localtime
 
@@ -15,7 +15,7 @@
 
 dcl-pr stat int(10) extproc('stat');
   path            pointer value options(*string);
-  stat            const likeds(st_stat_t);
+  stat            likeds(st_stat_t);
 end-pr;
 
 dcl-ds st_stat_t qualified template;

@@ -4,7 +4,7 @@
 
 // getcwd()--Get Current Directory
 dcl-pr getcwd pointer extproc('getcwd');
-  o_path   char(65535) options(*varsize) const;
+  o_path   char(65535) options(*varsize);
   i_size   uns(10) value;
 end-pr;
 

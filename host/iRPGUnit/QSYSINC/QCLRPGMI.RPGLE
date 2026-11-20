@@ -4,7 +4,7 @@
 
 //  Retrieve Program Information (QCLRPGMI) API
 dcl-pr qclrpgmi extpgm('QCLRPGMI');
-  o_rcvVar        char(65535) const  options(*varsize);
+  o_rcvVar        char(65535) options(*varsize);
   i_lenRcvVar     int(10) const;
   i_format        char(8) const;
   i_qPgm          char(20) const;
