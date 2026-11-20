@@ -87,11 +87,11 @@ dcl-s assertProcNmPrefix_t varchar(32) template;
 dcl-s dataType_t varchar(20) template;
 
 // Stream file path.
-dcl-s ifsStmf_t varchar(4096);
+dcl-s ifsStmf_t varchar(4096) template;
 
 // Message replacement data or message text.
 dcl-s msgText_t varchar(1024) template;
 
 // Old style error message prior to version 2.0.0.
-dcl-s oldMsg_t char(256);
+dcl-s oldMsg_t char(256) template;
 
