@@ -33,6 +33,7 @@ ctl-opt NoMain Option(*SrcStmt);
 /copy qinclude,ASSERT
 /copy qinclude,CALLPRC
 /copy qinclude,CMDRUNSRV
+/copy qinclude,CMDRUNV
 /copy qinclude,OBJECT
 /copy qinclude,PGMMSG
 /copy qinclude,TYPES_H
@@ -600,6 +601,66 @@ dcl-proc test_fmtCompMsg export;
 
   // Errors have priority over failures.
   aEqual('ERROR. 0 test case, 0 assertion, 2 failures, 1 error.': fmtCompMsg(0: 0: 2: 1));
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// The replacement variables of XMLSTMF are also replaced, when they are
+// written in lower case.
+//----------------------------------------------------------------------
+dcl-proc test_resolvePathVariables_lowerCase export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s path like(stmf_t);
+
+  path = resolvePathVariables('/tmp/<tstpgm>_<tstlib>_<mseconds>.xml'
+                              : g_qTestSuite);
+
+  assert(%scan('<': path) = 0: 'Variable not replaced: ' + path);
+  assertEqual('/tmp/TESTPGM03_QTEMP_': %subst(path: 1: 21));
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// A file name without directory is created in the current directory.
+//----------------------------------------------------------------------
+dcl-proc test_validateXmlStmf_fileNameOnly export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  assertEqual('': validateXmlStmf('result.xml': g_qTestSuite));
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// A file name, that is longer than 1024 characters after the
+// replacement of the variables, is rejected with a message.
+//----------------------------------------------------------------------
+dcl-proc test_validateXmlStmf_tooLong export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s path like(stmf_t);
+  dcl-s errMsg varchar(256);
+
+  // Each %F gets 'yyyy-mm-dd', hence 3000 characters.
+  path = '/tmp/';
+  dow (%len(path) < 600);
+    path += '%F';
+  enddo;
+
+  monitor;
+    errMsg = validateXmlStmf(path: g_qTestSuite);
+  on-error;
+    fail('validateXmlStmf() must return a message instead of +
+          raising an exception.');
+  endmon;
+
+  assert(errMsg <> '': 'validateXmlStmf() must reject the file name.');
 
 end-proc;
 

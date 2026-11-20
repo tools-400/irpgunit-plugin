@@ -128,6 +128,14 @@ dcl-proc validateXmlStmf export;
     endif;
   endmon;
 
+  // strftime() returns an empty name, if the name gets longer than
+  // the buffer.
+  if (xmlStmfRpl = '');
+    errMsg = 'Name too long after replacing the variables. +
+              Check parameter ''XML stream file'' (XMLSTMF).';
+    return errMsg;
+  endif;
+
   // Ensure all replacement variables have been replaced
   if (%scan('<': xmlStmfRpl) > 0 or %scan('>': xmlStmfRpl) > 0);
     errMsg = 'Not all replacement variables have been replaced. +
@@ -248,7 +256,7 @@ dcl-proc replace;
   dcl-s startPos int(10) inz(1);
   dcl-s x int(10);
   dcl-s theSearchArg like(i_searchArg);
-  dcl-c UC 'ABCDEFGHIJKLMNOPQRSTUVWXYC';
+  dcl-c UC 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   dcl-c LC 'abcdefghijklmnopqrstuvwxyz';
 
   result = i_string;
@@ -283,8 +291,6 @@ dcl-proc getDirectory;
     i_path          const like(stmf_t);
   end-pi;
 
-  dcl-s directory like(stmf_t);
-
   dcl-s tPath like(i_path);
   dcl-s char char(1);
   dcl-s pathLength int(10);
@@ -292,6 +298,10 @@ dcl-proc getDirectory;
   // ---------------------------------------------------------
 
   tPath = %trimr(i_path);
+
+  if (tPath = '');
+    return '';
+  endif;
 
   char = %subst(tPath: %len(tPath): 1);
   if (char = %char(SLASH));
@@ -307,7 +317,8 @@ dcl-proc getDirectory;
     endfor;
   endif;
 
-  return directory;
+  // A file name without directory is in the current directory.
+  return '.';
 
 end-proc;
 
