@@ -459,6 +459,41 @@ end-proc;
 
 
 //----------------------------------------------------------------------
+// Callstack_get() returns an empty entry for an index below 1, like
+// for an index above the number of entries.
+//----------------------------------------------------------------------
+dcl-proc testCallstackGetIndexBelow1 export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s pCallstk pointer;
+  dcl-ds callstkEnt likeds(callStkEnt_t);
+
+  // Setup.
+
+  pCallstk = Callstack_alloc(1: 'pCallstk');
+
+  clear callstkEnt;
+  callstkEnt.qStmt.qPgm.nm = 'MY_SRVPGM';
+  callstkEnt.qStmt.procNm = 'myProc';
+  Callstack_addEntry(pCallstk: callstkEnt);
+
+  // Execution.
+
+  callstkEnt = Callstack_get(pCallstk: 0);
+
+  // Controls.
+
+  assert(callstkEnt.qStmt.qPgm.nm = '': 'Entry 0 is not empty.');
+  assert(callstkEnt.qStmt.procNm = '': 'Entry 0 is not empty.');
+
+on-exit;
+  Callstack_dealloc(pCallstk: 'pCallstk');
+
+end-proc;
+
+
+//----------------------------------------------------------------------
 //   Support Procedures
 //----------------------------------------------------------------------
 
