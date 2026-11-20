@@ -27,6 +27,7 @@ ctl-opt NoMain Option(*SrcStmt);
 
 /copy qinclude,ASSERT
 /copy qinclude,LIBL
+/copy qinclude,OBJECT
 /copy qinclude,TYPES_H
 
 dcl-pr LIBLC extproc('LIBLC');
@@ -62,6 +63,12 @@ dcl-proc setUpSuite export;
   system('DLTJOBD JOBD(QTEMP/RPGUNITT)');
   system('CRTJOBD JOBD(QTEMP/RPGUNITT) INLLIBL(QGPL QTEMP)');
 
+  system('DLTJOBD JOBD(QTEMP/RPGUNITS)');
+  system('CRTJOBD JOBD(QTEMP/RPGUNITS) INLLIBL(*SYSVAL)');
+
+  system('DLTJOBD JOBD(QTEMP/RPGUNITN)');
+  system('CRTJOBD JOBD(QTEMP/RPGUNITN) INLLIBL(*NONE)');
+
   callp LIBLC(expected.curLib: expected.usrLiblArray);
 
 end-proc;
@@ -72,6 +79,8 @@ dcl-proc tearDownSuite export;
   end-pi;
 
   system('DLTJOBD JOBD(QTEMP/RPGUNITT)');
+  system('DLTJOBD JOBD(QTEMP/RPGUNITS)');
+  system('DLTJOBD JOBD(QTEMP/RPGUNITN)');
 
 end-proc;
 
@@ -142,6 +151,66 @@ dcl-proc testLoadLibl export;
   assert(liblData.libL.lib(1) = 'QGPL': 'First library list entry should match: QGPL');
 
   assert(liblData.libL.lib(2) = 'QTEMP': 'Third library list entry should match: QTEMP');
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// INLLIBL(*SYSVAL) loads the libraries of system value QUSRLIBL,
+// not the special value.
+//----------------------------------------------------------------------
+dcl-proc testLoadLibl_sysval export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds qJobD likeds(Object_t);
+  dcl-ds liblData likeds(LiblData_t);
+  dcl-ds qLib likeds(Object_t);
+  dcl-s i int(10);
+
+  // Run.
+
+  qJobD.nm = 'RPGUNITS';
+  qJobD.lib = 'QTEMP';
+  liblData = loadLibl(qJobD);
+
+  // Check.
+
+  for i = 1 to liblData.libL.numE;
+    assert(%subst(liblData.libL.lib(i): 1: 1) <> '*'
+           : 'Library list entry ' + %char(i) + ' is a special value: '
+           + liblData.libL.lib(i));
+    if (liblData.libL.lib(i) <> 'QTEMP');
+      qLib.nm = liblData.libL.lib(i);
+      qLib.lib = 'QSYS';
+      assert(Object_exists(qLib: '*LIB')
+             : 'Library ' + %trim(qLib.nm) + ' of QUSRLIBL not found.');
+    endif;
+  endfor;
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// INLLIBL(*NONE) loads an empty library list, not the special value.
+//----------------------------------------------------------------------
+dcl-proc testLoadLibl_none export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds qJobD likeds(Object_t);
+  dcl-ds liblData likeds(LiblData_t);
+
+  // Run.
+
+  qJobD.nm = 'RPGUNITN';
+  qJobD.lib = 'QTEMP';
+  liblData = loadLibl(qJobD);
+
+  // Check.
+
+  assert(liblData.libL.numE = 0: 'Number of libraries should be 0, but is '
+         + %char(liblData.libL.numE) + ': ' + liblData.libL.lib(1));
 
 end-proc;
 

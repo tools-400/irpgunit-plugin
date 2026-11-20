@@ -124,6 +124,16 @@ dcl-proc loadLibl export;
     plible = plible + 11;
   endfor;
 
+  // Special values of parameter INLLIBL of the job description.
+  if (libldata.libl.nume = 1);
+    select;
+    when (libldata.libl.lib(1) = '*SYSVAL');
+      libldata.libl = getUsrLiblSysVal();
+    when (libldata.libl.lib(1) = '*NONE');
+      clear libldata.libl;
+    endsl;
+  endif;
+
   libldata.curlib = '*CRTDFT';
 
   MemMgr_dealloc(pjobd0100: 'pjobd0100');
@@ -214,3 +224,67 @@ dcl-proc setTestSuiteLibl export;
 
 end-proc;
 
+
+//----------------------------------------------------------------------
+// Returns the libraries of system value QUSRLIBL, which is the initial
+// library list of a job description with INLLIBL(*SYSVAL).
+//----------------------------------------------------------------------
+dcl-proc getUsrLiblSysVal;
+  dcl-pi *N likeds(libl_t) extproc(*dclcase);
+  end-pi;
+
+  // Retrieve System Values (QWCRSVAL) API
+  dcl-pr qwcrsval extpgm('QWCRSVAL');
+    o_rcvVar    char(65535) options(*varsize);
+    i_lenRcvVar int(10) const;
+    i_numSysVal int(10) const;
+    i_sysVal    char(10) const;
+    io_errCode  char(65535) options(*varsize);
+  end-pr;
+
+  // Receiver of one system value: number of values, offset table and
+  // the information table of the value.
+  dcl-ds rcvVar qualified;
+    numSysVal int(10);
+    ofsSysVal int(10);
+    buffer    char(512);
+  end-ds;
+
+  dcl-ds sysValInf qualified based(pSysValInf);
+    name    char(10);
+    type    char(1);
+    status  char(1);
+    lenData int(10);
+    data    char(250);
+  end-ds;
+
+  // QUSRLIBL holds up to 25 library names of 10 characters.
+  dcl-c LIB_NAME_SIZE 10;
+
+  dcl-ds libldata likeds(libl_t) inz;
+  dcl-ds percolateErrors likeds(percolateErrors_t) inz(*likeds);
+  dcl-s lenData int(10);
+  dcl-s lib char(10);
+  dcl-s i int(10);
+
+  qwcrsval(rcvVar: %size(rcvVar): 1: 'QUSRLIBL': percolateErrors);
+
+  pSysValInf = %addr(rcvVar) + rcvVar.ofsSysVal;
+
+  lenData = sysValInf.lenData;
+  if (lenData > %size(sysValInf.data));
+    lenData = %size(sysValInf.data);
+  endif;
+
+  for i = 1 to %div(lenData: LIB_NAME_SIZE);
+    lib = %subst(sysValInf.data: (i - 1) * LIB_NAME_SIZE + 1: LIB_NAME_SIZE);
+    if (lib = '');
+      leave;
+    endif;
+    libldata.nume += 1;
+    libldata.lib(libldata.nume) = lib;
+  endfor;
+
+  return libldata;
+
+end-proc;
