@@ -708,6 +708,31 @@ dcl-proc testJenkins1QuotedMessage export;
 end-proc;
 
 //----------------------------------------------------------------------
+// Tests the replacement variable <TSTPGM> of parameter XMLSTMF.
+// The name of the test suite is inserted without trailing blanks.
+//----------------------------------------------------------------------
+dcl-proc testXmlStmfTstPgmVariable export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s path varchar(64);
+  dcl-s pathWithBlank varchar(64);
+
+  path = g_status.tmpName + '_TESTPGM25.xml';
+  pathWithBlank = g_status.tmpName + '_TESTPGM25 .xml';
+
+  runTestPgm25('testLongValue': '*JENKINS1': NO_ERROR
+               : g_status.tmpName + '_<TSTPGM>.xml');
+
+  assert(access(path: F_OK) = 0: 'File ' + path + ' not found.');
+
+on-exit;
+  unlink(path);
+  unlink(pathWithBlank);
+
+end-proc;
+
+//----------------------------------------------------------------------
 // Validates the test results of *JENKINS1 and *JENKINS2 (*ABORT)
 //----------------------------------------------------------------------
 dcl-proc validateJenkinsAbort;
