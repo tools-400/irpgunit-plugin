@@ -56,6 +56,7 @@ end-pr;
 
 dcl-ds g_status qualified;
   lastStsMsg   like(msgText_t) inz;
+  prevStsMsg   like(msgText_t) inz;
 end-ds;
 
 
@@ -474,6 +475,7 @@ dcl-proc sndStsMsg export;
   dcl-s msgKey char(4);
   dcl-ds percolateErrors likeds(percolateErrors_t) inz(*likeds);
 
+  g_status.prevStsMsg = g_status.lastStsMsg;
   g_status.lastStsMsg = msg;
 
   lenMsg = %len(%trimR(msg));
@@ -499,7 +501,14 @@ dcl-proc rstStsMsg export;
   dcl-pi *N;
   end-pi;
 
-  sndStsMsg(g_status.lastStsMsg);
+  dcl-s msg like(msgText_t);
+
+  // Copy the message, because sndStsMsg() changes prevStsMsg.
+  msg = g_status.prevStsMsg;
+  sndStsMsg(msg);
+
+  // A second call shows the same message again.
+  g_status.prevStsMsg = msg;
 
 end-proc;
 
