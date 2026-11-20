@@ -73,7 +73,7 @@ action matches the JUnit behavior and equals the original mode of iRPGUnit.
 :pt.*CONTINUE
 :pd.Test case processing continues even if an assertion fails. This mode
 can generate unexpectedly large amounts of result data. The final result
-is :HP2.Error:EHP2., if an assertion fails, otherwise :HP2.Success:EHP2..
+is :HP2.Failure:EHP2., if an assertion fails, otherwise :HP2.Success:EHP2..
 :eparml.
 :ehelp.
 .*
