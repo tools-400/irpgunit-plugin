@@ -41,7 +41,6 @@ ctl-opt nomain;
 
 dcl-c LCL_DOT '.';
 dcl-c LCL_SLASH '/';
-dcl-c LCL_BACKSLASH '\';
 
 //----------------------------------------------------------------------
 //   Global Variables
@@ -77,7 +76,9 @@ dcl-proc Stmf_resolvePath export;
 
   dcl-s resolvedPath like(ifsStmf_t);
 
-  resolvedPath = %trim(%xlate(LCL_BACKSLASH: LCL_SLASH: stmf));
+  // The backslash is a variant character: convert it from UCS-2 to the
+  // CCSID of the job at run time.
+  resolvedPath = %trim(%xlate(%char(BACK_SLASH): LCL_SLASH: stmf));
   if (startsWith(LCL_SLASH: resolvedPath));
     return resolvedPath;
   endif;

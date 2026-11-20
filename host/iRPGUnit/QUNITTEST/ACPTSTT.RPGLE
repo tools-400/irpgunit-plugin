@@ -304,6 +304,38 @@ dcl-proc testCobolFailureAndError export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// Stmf_resolvePath() replaces the backslash of the CCSID of the job by
+// a slash, also if the CCSID of the job (37) differs from the CCSID of
+// the iRPGUnit sources. Fixture TESTPGM26 binds module STMF.
+//----------------------------------------------------------------------
+dcl-proc testBackslashInCcsid37 export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s cmd varchar(256);
+
+  if (TestSuite_isDirty('TESTPGM26': 'QTEMP'));
+    runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM26) +
+            SRCFILE(QTESTCASES) BNDDIR(IRPGUNIT) +
+            BOPTION(*DUPPROC *DUPVAR) DLTSPLF(*YES)');
+  endif;
+
+  // The CCSID of the job is used, when the test suite is activated.
+  runCmd('CHGJOB CCSID(37)');
+
+  cmd = 'RUCALLTST TESTPGM26 OUTPUT(*NONE)';
+  callp(e) qcmdexc(cmd: %len(cmd));
+  if (%error);
+    fail('TESTPGM26: ' + %trimr(rcvMsgTxt('*ESCAPE')));
+  endif;
+
+on-exit;
+  runCmd('CHGJOB CCSID(*USRPRF)');
+
+end-proc;
+
+
 dcl-proc testStackTrace export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

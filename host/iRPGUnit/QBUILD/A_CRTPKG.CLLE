@@ -800,6 +800,9 @@
              CPYF       FROMFILE(&DEVLIB/&QTESTCASES) +
                           TOFILE(&LIB/&QTESTCASES) FROMMBR(TESTPGM25) +
                           TOMBR(*FROMMBR) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&DEVLIB/&QTESTCASES) +
+                          TOFILE(&LIB/&QTESTCASES) FROMMBR(TESTPGM26) +
+                          TOMBR(*FROMMBR) MBROPT(*REPLACE)
 
              /* ---------------------------------------------------- */
              /*  Copy source members: QUNITTEST                      */
