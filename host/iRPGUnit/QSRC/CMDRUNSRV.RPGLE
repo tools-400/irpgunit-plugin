@@ -621,9 +621,9 @@ dcl-proc runProc export;
   end-pi;
 
   dcl-s assertCnt int(10);
+  dcl-s failureEventIdx int(10);
   dcl-ds excpMsg likeds(msg_t) inz;
   dcl-ds runtimeErrorEvent likeds(runtimeErrorEvent_t) inz;
-  dcl-ds abstractTestEvent likeds(abstractTestEvent_t) inz;
   dcl-ds abstractTestEventUpdated likeds(abstractTestEvent_t) based(pAbstractTestEventUpdated);
 
   clrAssertFailEvt(testCaseResult.hTestEvents: procNamePrefix);
@@ -636,8 +636,8 @@ dcl-proc runProc export;
   on-error;
     if (testCaseResult.outcome = TEST_CASE_SUCCESS);
       excpMsg = rcvExcpMsgInfo();
-      abstractTestEvent = getAssertEventInternal();
-      if (not isAssertionEscape(excpMsg: abstractTestEvent));
+      failureEventIdx = getAssertionFailureIdx(testCaseResult.hTestEvents: excpMsg.key);
+      if (failureEventIdx = 0);
         // Handle runtime error
         testCaseResult.outcome = TEST_CASE_ERROR;
         testCaseResult.lastErrorEvent = list_size(testCaseResult.hTestEvents) + 1;
@@ -650,7 +650,7 @@ dcl-proc runProc export;
           addErrorTestEvent(testCaseResult.hTestEvents: runtimeErrorEvent);
       else;
         // Handle failed assertion
-        testCaseResult.lastFailureEvent = abstractTestEvent.index;
+        testCaseResult.lastFailureEvent = failureEventIdx;
         testCaseResult.outcome = TEST_CASE_FAILURE;
 
         resetAssertionError();
@@ -676,32 +676,39 @@ end-proc;
 
 
 //----------------------------------------------------------------------
-// Returns *ON, if the exception message is the escape message of the
-// latest failed assertion (see ASSERT.doFail()). A failed assertion,
+// Returns the index of the failure event, whose escape message is the
+// exception message (see ASSERT.doFail()), or 0 for a runtime error.
+// Only the escape message itself makes a failure: a failed assertion,
 // whose escape message has been monitored by the test, must not turn
-// a later runtime error into a failure.
+// a later runtime error into a failure, and a later successful
+// assertion, e.g. in ON-EXIT, must not turn a failure into an error.
 //----------------------------------------------------------------------
-dcl-proc isAssertionEscape;
-  dcl-pi *n ind extproc(*dclcase);
-    excpMsg           likeds(msg_t) const;
-    abstractTestEvent likeds(abstractTestEvent_t) const;
+dcl-proc getAssertionFailureIdx;
+  dcl-pi *n int(10) extproc(*dclcase);
+    hTestEvents pointer const;
+    excpMsgKey  char(4) const;
   end-pi;
 
-  if (isRuntimeError());
-    return *off;
+  // The list entry has the size of the event type,
+  // hence access it with a based data structure.
+  dcl-ds abstractTestEvent likeds(abstractTestEvent_t) based(pAbstractTestEvent);
+  dcl-s i int(10);
+
+  // A failure event without an escape message has a blank key.
+  if (excpMsgKey = *blanks);
+    return 0;
   endif;
 
-  // The escape message of an assertion is CPF9897, sent by module
-  // PGMMSG (sndEscapeMsg() or sndEscapeMsgToProcedure()).
-  if (excpMsg.id <> 'CPF9897' or excpMsg.qSndStmt.qMod.nm <> 'PGMMSG');
-    return *off;
-  endif;
+  for i = list_size(hTestEvents) downto 1;
+    pAbstractTestEvent = list_get(hTestEvents: i - 1);
+    if (abstractTestEvent.outcome = TEST_CASE_FAILURE);
+      if (abstractTestEvent.failure.escMsgKey = excpMsgKey);
+        return i;
+      endif;
+    endif;
+  endfor;
 
-  if (abstractTestEvent.outcome <> TEST_CASE_FAILURE or abstractTestEvent.index <= 0);
-    return *off;
-  endif;
-
-  return *on;
+  return 0;
 
 end-proc;
 

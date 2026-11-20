@@ -319,11 +319,21 @@ dcl-proc sndEscapeMsg export;
   dcl-pi *N;
     msg          like(msgText_t) const;
     callStkCnt   int(10) const;
+    o_msgKey     char(4) options(*nopass);
   end-pi;
 
   dcl-s lenMsg int(10);
-  dcl-s msgKey char(4);
+  dcl-s localMsgKey char(4);
+  // QMHSNDPM writes the key directly into the field of the caller,
+  // because the escape message ends this procedure.
+  dcl-s msgKey char(4) based(pMsgKey);
   dcl-ds percolateErrors likeds(percolateErrors_t) inz(*likeds);
+
+  if (%parms() >= %parmnum(o_msgKey));
+    pMsgKey = %addr(o_msgKey);
+  else;
+    pMsgKey = %addr(localMsgKey);
+  endif;
 
   lenMsg = %len(%trimr(msg));
 
@@ -348,11 +358,21 @@ dcl-proc sndEscapeMsgToProcedure export;
   dcl-pi *N;
     msg         like(msgText_t) const;
     procedure   varchar(256) const  options(*omit);
+    o_msgKey    char(4) options(*nopass);
   end-pi;
 
   dcl-s lenMsg int(10);
-  dcl-s msgKey char(4);
+  dcl-s localMsgKey char(4);
+  // QMHSNDPM writes the key directly into the field of the caller,
+  // because the escape message ends this procedure.
+  dcl-s msgKey char(4) based(pMsgKey);
   dcl-ds percolateErrors likeds(percolateErrors_t) inz(*likeds);
+
+  if (%parms() >= %parmnum(o_msgKey));
+    pMsgKey = %addr(o_msgKey);
+  else;
+    pMsgKey = %addr(localMsgKey);
+  endif;
 
   lenMsg = %len(%trimr(msg));
 

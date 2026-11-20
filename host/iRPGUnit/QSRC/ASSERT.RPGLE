@@ -430,11 +430,17 @@ dcl-proc doFail;
     startProc      varchar(256) options(*varsize) const;
   end-pi;
 
+  dcl-s eventIdx int(10);
+  // Failure event in the list of test events. The escape message
+  // stores its key there, so that CMDRUNSRV.runProc() recognizes it.
+  dcl-ds failureEvent likeds(testFailureEvent_t) based(pFailureEvent);
+
   // Add FAILURE event with callstack
   g_status.abstractTestEvent.failure.assertProc =
     getAssertProcName(g_status.procNamePrefix: startProc);
   g_status.abstractTestEvent.failure.msg = %trimr(msg);
   g_status.abstractTestEvent.failure.pCallstk = getCallStk(startProc);
+  g_status.abstractTestEvent.failure.escMsgKey = *blanks;
 
   if (not g_status.isJUnitStyle);
     g_status.abstractTestEvent.failure.isConfirmed = *on;
@@ -442,17 +448,18 @@ dcl-proc doFail;
 
   g_status.abstractTestEvent.index = list_size(g_status.hTestEvents) + 1;
 
-  addFailureTestEvent(g_status.hTestEvents: g_status.abstractTestEvent.failure);
+  eventIdx = addFailureTestEvent(g_status.hTestEvents: g_status.abstractTestEvent.failure);
+  pFailureEvent = list_get(g_status.hTestEvents: eventIdx - 1);
 
   if (%addr(toCallStackE) = *null);
     // called by fail()
     g_status.isAssertionError = *on;
-    sndEscapeMsgToProcedure(msg: TEST_CASE_EXECUTOR);
+    sndEscapeMsgToProcedure(msg: TEST_CASE_EXECUTOR: failureEvent.escMsgKey);
   else;
     // called by assertion procedure
     if (g_status.isJUnitStyle);
       g_status.isAssertionError = *on;
-      sndEscapeMsg(msg: toCallStackE + 1);
+      sndEscapeMsg(msg: toCallStackE + 1: failureEvent.escMsgKey);
     endif;
   endif;
 

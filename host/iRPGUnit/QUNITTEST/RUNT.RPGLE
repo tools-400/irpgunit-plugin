@@ -355,6 +355,122 @@ dcl-proc test_runTestProc_errAfterMonSucc export;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// The escape message of an iRPGUnit API (CPF9897, sent by module
+// PGMMSG) after a failed assertion, whose escape message has been
+// monitored, must be reported as an error.
+//----------------------------------------------------------------------
+dcl-proc test_runTestProc_apiErrAfterMonFail export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds testResult likeds(testCaseResult_t);
+  dcl-ds lastTestEvent likeds(abstractTestEvent_t) based(pLastTestEvent);
+  dcl-s outcome like(outcome_t);
+  dcl-s lastOutcome like(outcome_t);
+  dcl-s isException ind inz(*off);
+
+  // -----------------------------
+  // save current assertion status
+  // -----------------------------
+  saveAssertStatus();
+
+  // Execution.
+
+  g_testProc.procPtr = %paddr(test_api_error_after_monitored_failure);
+  g_testProc.procNm = 'test_api_error_after_monitored_failure';
+
+  monitor;
+    testResult = runTestProc(g_testProc: noSetUp: noTearDown);
+  on-error;
+    isException = *on;
+  endmon;
+
+  if (not isException);
+    outcome = testResult.outcome;
+    // The list entry has the size of the event type,
+    // hence access it with a based data structure.
+    pLastTestEvent = list_getLast(testResult.hTestEvents);
+    lastOutcome = lastTestEvent.outcome;
+    disposeTestResult(testResult);
+  endif;
+
+  // --------------------------------
+  // restore current assertion status
+  // --------------------------------
+  restoreAssertStatus();
+
+  // Controls.
+
+  assert(not isException: 'runTestProc() must not raise an exception');
+  aEqual(TEST_CASE_ERROR: outcome);
+  aEqual(TEST_CASE_ERROR: lastOutcome);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// A successful assertion in the ON-EXIT section of a test, that has
+// been ended by a failed assertion, must not change the failure into
+// an error.
+//----------------------------------------------------------------------
+dcl-proc test_runTestProc_onExitAfterFailure export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds testResult likeds(testCaseResult_t);
+  dcl-ds failureEvent likeds(abstractTestEvent_t) based(pFailureEvent);
+  dcl-s outcome like(outcome_t);
+  dcl-s lastFailureEvent int(10);
+  dcl-s failureOutcome like(outcome_t);
+  dcl-s isConfirmed ind inz(*off);
+  dcl-s isException ind inz(*off);
+
+  // -----------------------------
+  // save current assertion status
+  // -----------------------------
+  saveAssertStatus();
+
+  // Execution.
+
+  g_testProc.procPtr = %paddr(test_successful_assertion_in_on_exit);
+  g_testProc.procNm = 'test_successful_assertion_in_on_exit';
+
+  monitor;
+    testResult = runTestProc(g_testProc: noSetUp: noTearDown);
+  on-error;
+    isException = *on;
+  endmon;
+
+  if (not isException);
+    outcome = testResult.outcome;
+    lastFailureEvent = testResult.lastFailureEvent;
+    if (lastFailureEvent > 0);
+      // The list entry has the size of the event type,
+      // hence access it with a based data structure.
+      pFailureEvent = list_get(testResult.hTestEvents: lastFailureEvent - 1);
+      failureOutcome = failureEvent.outcome;
+      isConfirmed = failureEvent.failure.isConfirmed;
+    endif;
+    disposeTestResult(testResult);
+  endif;
+
+  // --------------------------------
+  // restore current assertion status
+  // --------------------------------
+  restoreAssertStatus();
+
+  // Controls.
+
+  assert(not isException: 'runTestProc() must not raise an exception');
+  aEqual(TEST_CASE_FAILURE: outcome);
+  iEqual(1: lastFailureEvent);
+  aEqual(TEST_CASE_FAILURE: failureOutcome);
+  assert(isConfirmed: 'The failure event must be confirmed.');
+
+end-proc;
+
+
 dcl-proc test_runTestProc_withSetup export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
@@ -1001,6 +1117,39 @@ dcl-proc test_error_after_monitored_failure_and_success;
   aEqual('a': 'a');
 
   raiseError();
+
+end-proc;
+
+
+dcl-proc test_api_error_after_monitored_failure;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  traceCall('test_api_error_after_monitored_failure');
+
+  monitor;
+    aEqual('a': 'b');
+  on-error;
+    // Expected failure, ignored.
+  endmon;
+
+  // Parameter error: *EMPTY together with a message text.
+  assertMessageQueueContains('RUNT': 'QTEMP': '*EMPTY': 'x': *omit
+                             : %timestamp());
+
+end-proc;
+
+
+dcl-proc test_successful_assertion_in_on_exit;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  traceCall('test_successful_assertion_in_on_exit');
+
+  aEqual('a': 'b');
+
+on-exit;
+  aEqual('a': 'a');
 
 end-proc;
 

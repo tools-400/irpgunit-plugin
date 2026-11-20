@@ -297,6 +297,9 @@ dcl-ds testFailureEvent_t qualified template;
   pCallstk    pointer inz;
   isConfirmed ind inz(*off);
   msg         like(msgText_t) inz;
+  // Key of the escape message of the failed assertion, blank if no
+  // escape message has been sent (ONFAILURE(*CONTINUE)).
+  escMsgKey   char(4) inz;
 end-ds;
 
 // Runtime Error Event.

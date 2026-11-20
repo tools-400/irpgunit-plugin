@@ -130,10 +130,15 @@ end-pr;
 // @param msg        - Message text to send (up to 256 characters)
 // @param callStkCnt - Call stack counter identifying the target procedure
 //                     0 = current level, 1 = caller, 2 = caller's caller, etc.
+// @param o_msgKey   - Returns the key of the escape message (optional). The
+//                     key is written, before the escape message ends the
+//                     procedures up to the target procedure. Hence pass a
+//                     field, that outlives them.
 ///
 dcl-pr sndEscapeMsg extproc('PGMMSG_sndEscapeMsg');
   msg        like(msgText_t) const;
   callStkCnt int(10) const;
+  o_msgKey   char(4) options(*nopass);
 end-pr;
 
 ///
@@ -146,10 +151,13 @@ end-pr;
 // @param msg       - Message text to send (up to 256 characters)
 // @param procedure - Procedure name identifying the target procedure
 //                    Can be *OMIT to use default targeting
+// @param o_msgKey  - Returns the key of the escape message (optional), see
+//                    sndEscapeMsg().
 ///
 dcl-pr sndEscapeMsgToProcedure extproc('PGMMSG_sndEscapeMsgToProcedure');
   msg       like(msgText_t) const;
   procedure varchar(256) options(*omit) const;
+  o_msgKey  char(4) options(*nopass);
 end-pr;
 
 ///
