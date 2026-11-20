@@ -1252,6 +1252,12 @@
                           TEXT('iRPGUnit Fixture - Backslash in CCSID 37.')
              MONMSG     MSGID(CPF3288)
 
+             CHGPFM     FILE(&TARGETLIB/QTESTCASES) +
+                          MBR(TESTPGM27) +
+                          SRCTYPE(RPGLE) +
+                          TEXT('iRPGUnit Fixture - Long export name.')
+             MONMSG     MSGID(CPF3288)
+
              CHGPFM     FILE(&TARGETLIB/QUNITTEST) +
                           MBR(ACPTSTT) +
                           SRCTYPE(RPGLE) +

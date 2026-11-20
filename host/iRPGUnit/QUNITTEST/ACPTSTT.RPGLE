@@ -336,6 +336,30 @@ on-exit;
 end-proc;
 
 
+//----------------------------------------------------------------------
+// A test suite, that exports a procedure with a name of more than 256
+// characters, is loaded and run.
+//----------------------------------------------------------------------
+dcl-proc testLongExportName export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s cmd varchar(256);
+
+  if (TestSuite_isDirty('TESTPGM27': 'QTEMP'));
+    runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM27) +
+            SRCFILE(QTESTCASES) DLTSPLF(*YES)');
+  endif;
+
+  cmd = 'RUCALLTST TESTPGM27 OUTPUT(*NONE)';
+  callp(e) qcmdexc(cmd: %len(cmd));
+  if (%error);
+    fail('TESTPGM27: ' + %trimr(rcvMsgTxt('*ESCAPE')));
+  endif;
+
+end-proc;
+
+
 dcl-proc testStackTrace export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

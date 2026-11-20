@@ -137,6 +137,13 @@ dcl-proc getProcNm export;
 
 
   procnm_p = proclist.hdr + procdesc.procnmoff;
+
+  // Test procedures have at most 256 characters (procNm_t, TSTPRC).
+  // Skip a longer exported name, e.g. given with EXTPROC.
+  if (procdesc.procnmsize > %len(procnm: *max));
+    return '';
+  endif;
+
   procnm = %subst(procnmbuffer: 1: procdesc.procnmsize);
 
   return procnm;
