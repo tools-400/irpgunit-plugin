@@ -461,6 +461,223 @@ dcl-proc testSrcStmfSqlcblle export;
 end-proc;
 
 
+dcl-proc testSrcStmfSqlrpgleTwoIncDirs export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds incDir likeds(incDir_t) inz;
+
+  clear incDir;
+  incDir.size = 2;
+  incDir.path(1) = '/home/dev/dir1';
+  incDir.path(2) = '/home/dev/dir2';
+
+  // INCDIR of CRTSQLRPGI accepts only one directory: it gets the
+  // first one, the compiler gets all of them with COMPILEOPT.
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 noCOption:
+                                 noDbgView:
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 noCompileOpt:
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 incDir:
+                                 -1:   // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          INCDIR(''/home/dev/dir1'') +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''TGTCCSID(*JOB) +
+          INCDIR(''''/home/dev/dir1'''' ''''/home/dev/dir2'''')'') ': crtRpgModCmd);
+
+end-proc;
+
+
+dcl-proc testSrcStmfSqlcblleTwoIncDirs export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds incDir likeds(incDir_t) inz;
+
+  clear incDir;
+  incDir.size = 2;
+  incDir.path(1) = '/home/dev/dir1';
+  incDir.path(2) = '/home/dev/dir2';
+
+  // INCDIR of CRTSQLCBLI accepts only one directory: it gets the
+  // first one, the compiler gets all of them with COMPILEOPT.
+  crtCblModCmd = getCrtCblModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLCBLLE:
+                                 noCOption:
+                                 noDbgView:
+                                 noPOption:
+                                 noCompileOpt:
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 incDir:
+                                 -1:   // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLCBLI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLCBLLE + ''') +
+          OBJTYPE(*MODULE) +
+          INCDIR(''/home/dev/dir1'') +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''TGTCCSID(*JOB) +
+          INCDIR(''''/home/dev/dir1'''' ''''/home/dev/dir2'''')'') ': crtCblModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// INCDIR of COMPILEOPT overrides INCDIR for the compiler. INCDIR
+// is still passed to CRTSQLRPGI for SQL INCLUDE statements.
+//----------------------------------------------------------------------
+dcl-proc testSqlrpgleCompileOptIncDir export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds incDir likeds(incDir_t) inz;
+
+  clear incDir;
+  incDir.size = 1;
+  incDir.path(1) = '/home/dev/dir1';
+
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 noCOption:
+                                 noDbgView:
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 'INCDIR(''/home/dev/dir3'')':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 incDir:
+                                 -1:   // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          INCDIR(''/home/dev/dir1'') +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''INCDIR(''''/home/dev/dir3'''') TGTCCSID(*JOB)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// The same for CRTSQLCBLI.
+//----------------------------------------------------------------------
+dcl-proc testSqlcblleCompileOptIncDir export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds incDir likeds(incDir_t) inz;
+
+  clear incDir;
+  incDir.size = 1;
+  incDir.path(1) = '/home/dev/dir1';
+
+  crtCblModCmd = getCrtCblModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLCBLLE:
+                                 noCOption:
+                                 noDbgView:
+                                 noPOption:
+                                 'INCDIR(''/home/dev/dir3'')':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 incDir:
+                                 -1:   // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLCBLI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLCBLLE + ''') +
+          OBJTYPE(*MODULE) +
+          INCDIR(''/home/dev/dir1'') +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''INCDIR(''''/home/dev/dir3'''') TGTCCSID(*JOB)'') ': crtCblModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// With INCDIR in COMPILEOPT, the directories 2-n of INCDIR would get
+// lost, because CRTSQLRPGI accepts only one directory. RUCRTRPG must
+// reject that.
+//----------------------------------------------------------------------
+dcl-proc testSqlrpgleIncDirConflict export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds msgInfo likeds(MsgInfo_t) inz;
+  dcl-s isError ind inz(*off);
+
+  // Run.
+
+  monitor;
+    runCmd('RUCRTRPG TSTPGM(QTEMP/TESTPGM01) +
+            SRCSTMF(''' + TEMP_DIR + STMF_SQLRPGLE + ''') +
+            INCDIR(''/home/dev/dir1'' ''/home/dev/dir2'') +
+            COMPILEOPT(''INCDIR(''''/home/dev/dir3'''')'')');
+  on-error;
+    isError = *on;
+    msgInfo = getMonitoredMessage(*on);
+  endmon;
+
+  // Check.
+
+  assert(isError: 'RUCRTRPG must reject several INCDIR with INCDIR in COMPILEOPT.');
+  assert(%scan('Only one directory is allowed for INCDIR': msgInfo.txt) > 0
+         : 'Unexpected message: ' + %trimr(msgInfo.txt));
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// The same for CRTSQLCBLI.
+//----------------------------------------------------------------------
+dcl-proc testSqlcblleIncDirConflict export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds msgInfo likeds(MsgInfo_t) inz;
+  dcl-s isError ind inz(*off);
+
+  // Run.
+
+  monitor;
+    runCmd('RUCRTCBL TSTPGM(QTEMP/TESTPGM01) +
+            SRCSTMF(''' + TEMP_DIR + STMF_SQLCBLLE + ''') +
+            INCDIR(''/home/dev/dir1'' ''/home/dev/dir2'') +
+            COMPILEOPT(''INCDIR(''''/home/dev/dir3'''')'')');
+  on-error;
+    isError = *on;
+    msgInfo = getMonitoredMessage(*on);
+  endmon;
+
+  // Check.
+
+  assert(isError: 'RUCRTCBL must reject several INCDIR with INCDIR in COMPILEOPT.');
+  assert(%scan('Only one directory is allowed for INCDIR': msgInfo.txt) > 0
+         : 'Unexpected message: ' + %trimr(msgInfo.txt));
+
+end-proc;
+
+
 dcl-proc testOneCompileOption export;
   dcl-pi *n extproc(*dclcase);
   end-pi;

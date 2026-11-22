@@ -153,6 +153,19 @@ dcl-proc crtTst export;
                              + localSrcStmf
                              + '.' );
     endif;
+
+    // INCDIR of CRTSQLRPGI and CRTSQLCBLI accepts only one directory.
+    // With INCDIR in COMPILEOPT the compiler does not get the directories
+    // of INCDIR, so that the directories 2-n would get lost.
+    if ((srcType = MBR_SQLRPGLE or srcType = MBR_SQLCBLLE)
+        and incDir.size > 1
+        and %scan(PARM_INCDIR + '(': uCase(compileOpt)) > 0);
+      sndEscapeMsgAboveCtlBdy(
+         'Only one directory is allowed for INCDIR, if COMPILEOPT +
+          contains INCDIR. INCDIR is passed to the SQL precompiler, +
+          which accepts only one directory, and the directories of +
+          COMPILEOPT to the compiler.');
+    endif;
   else;
 
     // Verify that the source file exists
@@ -894,7 +907,10 @@ dcl-proc getCrtRpgModCmd export;
     cmd = 'CRTSQLRPGI OBJ(' + serializeObjectName( testPgm ) + ') ';
     if (isStmf(srcStmf));
       cmd += 'SRCSTMF(' + serializeStmfPath( srcStmf ) + ') ';
-      cmd += serializeIncDir(incDir);
+      // INCDIR of CRTSQLRPGI accepts only one directory and is not
+      // passed to the compiler: the compiler gets all directories
+      // with COMPILEOPT.
+      cmd += serializeIncDir(incDir: 1);
     else;
       cmd += 'SRCFILE(' + serializeObjectName( srcFile ) + ') ';
       cmd += serializeValue( 'SRCMBR' : srcMbr );
@@ -1019,7 +1035,9 @@ dcl-proc getCrtCblModCmd export;
     cmd = 'CRTSQLCBLI OBJ(' + serializeObjectName( testpgm ) + ') ';
     if (isStmf(srcStmf));
       cmd += 'SRCSTMF(' + serializeStmfPath( srcStmf ) + ') ';
-      cmd += serializeIncDir(incDir);
+      // INCDIR of CRTSQLCBLI accepts only one directory: the compiler
+      // gets all directories with COMPILEOPT.
+      cmd += serializeIncDir(incDir: 1);
     else;
       cmd += 'SRCFILE(' + serializeObjectName( srcFile ) + ') ';
       cmd += serializeValue( 'SRCMBR' : srcMbr );
@@ -1294,29 +1312,37 @@ end-proc;
 
 dcl-proc serializeIncDir;
   dcl-pi *n like(serializedIncDir_t) extproc(*dclcase);
-    incDir likeds(incDir_t) const;
+    incDir  likeds(incDir_t) const;
+    maxDirs int(10) const options(*nopass);
   end-pi;
 
   // Serialized Options.
   dcl-s serialized like(serializedIncDir_t);
   // Counter.
   dcl-s i int(10);
+  // Number of directories to serialize.
+  dcl-s numDirs int(10);
 
 
   if incDir.size = 1 and incDir.path(1) = '*NONE';
   return '';
   endif;
 
+  numDirs = incDir.size;
+  if (%parms() >= %parmnum(maxDirs) and maxDirs < numDirs);
+    numDirs = maxDirs;
+  endif;
+
   serialized = 'INCDIR(';
 
-  for i = 1 to incDir.size;
+  for i = 1 to numDirs;
     if (i >= 2);
       serialized += ' ';
     endif;
     serialized += addQuotes(%trim(incDir.path(i)));
   endfor;
 
-  if incDir.size > 0;
+  if numDirs > 0;
     serialized += ') ';
   endif;
 

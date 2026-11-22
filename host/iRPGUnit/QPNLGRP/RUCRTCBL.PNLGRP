@@ -256,8 +256,16 @@ compiler to find copy files. The compiler will search the directories
 specified here if the copy files in the source program can not be
 resolved.
 :p.
-Please remeber that the :HP2.CRTCBLMOD:EHP2. command allows up to 32
-directories but :HP2.CRTSQLCBLI:EHP2. is limited to one directory.
+For SQL stream files, the first directory is passed to the
+:HP2.INCDIR:EHP2. parameter of :HP2.CRTSQLCBLI:EHP2., which accepts
+only one directory. The SQL precompiler searches it for the files of
+SQL INCLUDE statements. All directories are passed to the compiler
+with :HP2.COMPILEOPT:EHP2..
+:p.
+If :HP2.COMPILEOPT:EHP2. already contains :HP2.INCDIR:EHP2., the
+compiler gets the directories of :HP2.COMPILEOPT:EHP2.. Then
+:HP2.INCDIR:EHP2. must not contain more than one directory for SQL
+stream files.
 :p.
 Each directory entry can be up to 4096 characters. The maximum length
 accepted by the IBM i object creation command is not known.
