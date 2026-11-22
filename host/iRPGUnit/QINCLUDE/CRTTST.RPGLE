@@ -217,4 +217,19 @@ dcl-pr deleteModulesAndSpooledFiles
   modules   likeds(objectArray_t) const;
 end-pr;
 
+///
+// Returns *on, if the definition of a parameter of a command allows a
+// value, e.g. DBGVIEW(*LIST) of CRTSQLRPGI.
+//
+// @param parmCdml - Parameter definition: element <Parm Kwd="..."> of the
+//                   command definition (CDML), encoded in UTF-8
+// @param value    - Value of the parameter, e.g. *LIST
+//
+// @return *ON, if the parameter definition contains the value
+///
+dcl-pr isParmValue ind extproc('CRTTST_isParmValue');
+  parmCdml varchar(32767) ccsid(*utf8) const;
+  value    varchar(32) const;
+end-pr;
+
 /endif

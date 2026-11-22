@@ -1235,9 +1235,12 @@ dcl-proc testCOptionSqlRpgle export;
                                  noIncDir:
                                  -1:  // -1 = *JOB
                                  noCvtCcsid);
+  // DBGVIEW of COMPILEOPT requires DBGVIEW(*NONE) for the precompiler,
+  // because the precompiler passes its debug view to the compiler.
   aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
           SRCSTMF(''' + STMF_SQLRPGLE + ''') +
           OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          DBGVIEW(*NONE) +
           CVTCCSID(*JOB) +
           COMPILEOPT(''DBGVIEW(*LIST) TGTCCSID(*JOB) OPTION(*SRCSTMT)'') ': crtRpgModCmd);
 
@@ -1290,6 +1293,7 @@ dcl-proc testCOptionSqlCblle export;
   aEqual('CRTSQLCBLI OBJ(*CURLIB/SYSTYPES) +
           SRCSTMF(''' + STMF_SQLCBLLE + ''') +
           OBJTYPE(*MODULE) +
+          DBGVIEW(*NONE) +
           CVTCCSID(*JOB) +
           COMPILEOPT(''DBGVIEW(*LIST) TGTCCSID(*JOB) OPTION(*NOMONOPRC)'') ': crtCblModCmd);
 
@@ -1519,6 +1523,130 @@ dcl-proc testDbgViewSqlRpgle export;
           DBGVIEW(*LIST) +
           CVTCCSID(*JOB) +
           COMPILEOPT(''TGTCCSID(*JOB)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// A debug view, that the precompiler does not support, is passed to
+// the compiler with COMPILEOPT, with DBGVIEW(*NONE) for the precompiler.
+//----------------------------------------------------------------------
+dcl-proc testDbgViewCopySqlRpgle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 noCOption:
+                                 '*COPY':
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 noCompileOpt:
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          DBGVIEW(*NONE) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''DBGVIEW(*COPY) TGTCCSID(*JOB)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+dcl-proc testDbgViewAllSqlCblle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  crtCblModCmd = getCrtCblModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLCBLLE:
+                                 noCOption:
+                                 '*ALL':
+                                 noPOption:
+                                 noCompileOpt:
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLCBLI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLCBLLE + ''') +
+          OBJTYPE(*MODULE) +
+          DBGVIEW(*NONE) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''DBGVIEW(*ALL) TGTCCSID(*JOB)'') ': crtCblModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// The allowed values of DBGVIEW are taken from the command definition
+// (CDML) of CRTSQLRPGI. Before 7.5 (without PTFs) there are only *NONE
+// and *SOURCE. The CDML is modelled after the CDML of 7.5.
+//----------------------------------------------------------------------
+dcl-proc testIsParmValue export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-s cdmlOld varchar(1000) ccsid(*utf8);
+  dcl-s cdml75 varchar(1000) ccsid(*utf8);
+
+  cdmlOld = '<Parm Kwd="DBGVIEW" Type="CHAR" Rstd="YES" Dft="*NONE">'
+          + '<SpcVal><Value Val="*NONE" MapTo="*NONE"/>'
+          + '<Value Val="*SOURCE" MapTo="*SOURCE"/></SpcVal></Parm>';
+  cdml75 = '<Parm Kwd="DBGVIEW" Type="CHAR" Rstd="YES" Dft="*SOURCE">'
+         + '<SpcVal><Value Val="*NONE" MapTo="*NONE"/>'
+         + '<Value Val="*SOURCE" MapTo="*SOURCE"/>'
+         + '<Value Val="*STMT" MapTo="*STMT"/>'
+         + '<Value Val="*LIST" MapTo="*LIST"/></SpcVal></Parm>';
+
+  assert(isParmValue(cdmlOld: '*SOURCE'): '*SOURCE must be allowed before 7.5');
+  assert(not isParmValue(cdmlOld: '*LIST'): '*LIST must not be allowed before 7.5');
+  assert(isParmValue(cdml75: '*LIST'): '*LIST must be allowed on 7.5');
+  assert(not isParmValue(cdml75: '*COPY'): '*COPY must not be allowed on 7.5');
+  assert(not isParmValue('': '*NONE'): 'Nothing must be allowed without CDML');
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// DBGVIEW of COMPILEOPT overrides DBGVIEW. The precompiler gets
+// DBGVIEW(*NONE), because it passes its debug view to the compiler.
+//----------------------------------------------------------------------
+dcl-proc testDbgViewCompileOptSqlRpgle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 noCOption:
+                                 '*LIST':
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 'DBGVIEW(*SOURCE)':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          DBGVIEW(*NONE) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''DBGVIEW(*SOURCE) TGTCCSID(*JOB)'') ': crtRpgModCmd);
 
 end-proc;
 

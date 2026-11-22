@@ -71,6 +71,13 @@ dcl-ds dltSplfUserData_t qualified template;
   name      char(10) dim(52);
 end-ds;
 
+// Debug views of SQL sources: DBGVIEW of the SQL precompiler and DBGVIEW,
+// that is added to COMPILEOPT for the compiler (see getSqlDbgViews()).
+dcl-ds sqlDbgViews_t qualified template;
+  precompiler like(dbgView_t);
+  compiler    like(dbgView_t);
+end-ds;
+
 
 //----------------------------------------------------------------------
 //   GLOBAL VARIABLES
@@ -876,6 +883,7 @@ dcl-proc getCrtRpgModCmd export;
   // Command string accumulator.
   dcl-s cmd like(cmd_t);
   dcl-s srcType char(10);
+  dcl-ds dbgViews likeds(sqlDbgViews_t);
 
   if (isStmf(srcStmf));
     srcType = uCase(getStmfType(srcStmf));
@@ -919,7 +927,8 @@ dcl-proc getCrtRpgModCmd export;
     cmd += serializeOptions( 'OPTION' : pOptions );
     cmd += serializeValue('OBJTYPE': '*MODULE');
     cmd += serializeValue( 'TGTRLS' : targetRls );
-    cmd += serializeValue( 'DBGVIEW' : dbgView);
+    dbgViews = getSqlDbgViews('CRTSQLRPGI': dbgView: compileOpt);
+    cmd += serializeValue( 'DBGVIEW' : dbgViews.precompiler);
 
     if (isStmf(srcStmf));
       // Check, if parameter CVTCCSID is present (release level/PTF status)
@@ -940,7 +949,8 @@ dcl-proc getCrtRpgModCmd export;
       cmd += serializeValue( 'RPGPPOPT' : pRpgPpOpt);
     endif;
 
-    cmd += serializeCompileOpt(compileOpt: define: tgtCcsid: incDir: cOption);
+    cmd += serializeCompileOpt(compileOpt: dbgViews.compiler: define: tgtCcsid:
+                               incDir: cOption);
 
     // append arbitrary compile parameters
     cmd += serializeArbitraryParams(compilerParams);
@@ -978,6 +988,7 @@ dcl-proc getCrtCblModCmd export;
   // Command string accumulator.
   dcl-s cmd like(cmd_t);
   dcl-s srcType char(10);
+  dcl-ds dbgViews likeds(sqlDbgViews_t);
 
   if (isStmf(srcStmf));
     srcType = uCase(getStmfType(srcStmf));
@@ -1024,7 +1035,8 @@ dcl-proc getCrtCblModCmd export;
     cmd += serializeOptions( 'OPTION' : pOptions );
     cmd += serializeValue('OBJTYPE': '*MODULE');
     cmd += serializeValue( 'TGTRLS' : targetRls );
-    cmd += serializeValue( 'DBGVIEW' : dbgView);
+    dbgViews = getSqlDbgViews('CRTSQLCBLI': dbgView: compileOpt);
+    cmd += serializeValue( 'DBGVIEW' : dbgViews.precompiler);
 
     if (isStmf(srcStmf));
       // Check, if parameter CVTCCSID is present (release level/PTF status)
@@ -1041,7 +1053,8 @@ dcl-proc getCrtCblModCmd export;
       endif;
     endif;
 
-    cmd += serializeCompileOpt(compileOpt: define: tgtCcsid: incDir: cOption);
+    cmd += serializeCompileOpt(compileOpt: dbgViews.compiler: define: tgtCcsid:
+                               incDir: cOption);
 
     // append arbitrary compile parameters
     cmd += serializeArbitraryParams(compilerParams);
@@ -1326,13 +1339,15 @@ end-proc;
 
 
 ///
-// Returns parameter COMPILEOPT of CRTSQLRPGI and CRTSQLCBLI. DEFINE,
-// TGTCCSID, INCDIR and OPTION are added, unless the compile options
-// of the user already contain them.
+// Returns parameter COMPILEOPT of CRTSQLRPGI and CRTSQLCBLI. The debug
+// view for the compiler (see getSqlDbgViews()) is added, if any. DEFINE,
+// TGTCCSID, INCDIR and OPTION are added, unless the compile options of
+// the user already contain them.
 ///
 dcl-proc serializeCompileOpt;
   dcl-pi *n like(serializedString_t) extproc(*dclcase);
     compileOpt like(compileOpt_t) const;
+    dbgView    like(dbgView_t) const;
     define     likeds(defines_t) const;
     tgtCcsid   like(tgtCcsid_t) const;
     incDir     likeds(incDir_t) const;
@@ -1345,6 +1360,7 @@ dcl-proc serializeCompileOpt;
   if (compileOpt <> '');
     compilerOpts = %trim(removequotes(compileOpt)) + ' ';
   endif;
+  compilerOpts += serializeValue( 'DBGVIEW' : dbgView );
   if (not containsParm(compileOpt: PARM_DEFINE));
     compilerOpts += serializeDefines(define);
   endif;
@@ -1359,6 +1375,54 @@ dcl-proc serializeCompileOpt;
   endif;
 
   return serializeString( 'COMPILEOPT' : compilerOpts);
+
+end-proc;
+
+
+///
+// Returns the debug views of an SQL source for the SQL precompiler and for
+// the compiler. The precompiler passes its debug view to the compiler.
+// Therefore a debug view, that the precompiler does not support (e.g.
+// *COPY, or *LIST on a release without it), is passed to the compiler
+// with COMPILEOPT and the precompiler gets DBGVIEW(*NONE). DBGVIEW of
+// COMPILEOPT overrides the debug view and needs DBGVIEW(*NONE) too.
+///
+dcl-proc getSqlDbgViews;
+  dcl-pi *n likeds(sqlDbgViews_t) extproc(*dclcase);
+    command    char(10) const;
+    dbgView    like(dbgView_t) const;
+    compileOpt like(compileOpt_t) const;
+  end-pi;
+
+  dcl-ds dbgViews likeds(sqlDbgViews_t) inz;
+
+  select;
+  when (containsParm(compileOpt: PARM_DBGVIEW));
+    dbgViews.precompiler = '*NONE';
+  when (dbgView = '' or isParmValue(getParmCdml(command: PARM_DBGVIEW): dbgView));
+    dbgViews.precompiler = dbgView;
+  other;
+    dbgViews.precompiler = '*NONE';
+    dbgViews.compiler = dbgView;
+  endsl;
+
+  return dbgViews;
+
+end-proc;
+
+
+dcl-proc isParmValue export;
+  dcl-pi *n ind;
+    parmCdml varchar(32767) ccsid(*utf8) const;
+    value    varchar(32) const;
+  end-pi;
+
+  // Allowed value of the parameter: <Value Val="*LIST" .../>
+  dcl-s valueCdml varchar(48) ccsid(*utf8);
+
+  valueCdml = 'Val="' + %trim(value) + '"';
+
+  return %scan(valueCdml: parmCdml) > 0;
 
 end-proc;
 
@@ -1450,20 +1514,42 @@ dcl-proc haveCvtCcsidParam;
     command char(10) const;
   end-pi;
 
+  return (getParmCdml(command: 'CVTCCSID') <> '');
+
+end-proc;
+
+///
+// Returns the definition of a parameter of a command, that is found in the
+// library list: the element <Parm Kwd="..."> ... </Parm> of the command
+// definition (CDML), encoded in UTF-8. Returns an empty string, if the
+// command or the parameter is not found.
+///
+dcl-proc getParmCdml;
+  dcl-pi *n varchar(32767) ccsid(*utf8) extproc(*dclcase);
+    command char(10) const;
+    kwd     varchar(10) const;
+  end-pi;
+
+  dcl-c MAX_PARM_CDML 32767;
+
   dcl-ds dest0100 likeds(dest0100_t) inz;
   dcl-ds apiinfo likeds(cmdd0100_t) inz;
   dcl-ds cmdd0100 likeds(cmdd0100_t) based(pCmdd0100);
   dcl-s rcvVar char(16000000) based(pCmdd0100);
   dcl-s cdml char(16000000) ccsid(*utf8) based(pCdml);
   dcl-s cdmlLen int(10);
-  dcl-s kwdCvtCcsid varchar(16) ccsid(*utf8) inz('Kwd="CVTCCSID"');
+  dcl-s parmStart varchar(32) ccsid(*utf8);
+  dcl-s parmEnd varchar(8) ccsid(*utf8) inz('</Parm>');
+  dcl-s start int(10);
+  dcl-s end int(10);
+  dcl-s len int(10);
+  dcl-s parmCdml varchar(32767) ccsid(*utf8);
   dcl-ds errCode likeds(errorCode_t) inz(*likeds);
-  dcl-s isParm ind;
 
   dest0100.lenRcvVar = %size(apiinfo);
   QCDRCMDD(command + '*LIBL': dest0100: 'DEST0100': apiinfo: 'CMDD0100': errCode);
   if (errCode.bytAvl > 0);
-    return *off;
+    return '';
   endif;
 
   pCmdd0100 = MemMgr_alloc(apiinfo.bytAvl: 'pCmdd0100');
@@ -1472,20 +1558,34 @@ dcl-proc haveCvtCcsidParam;
   QCDRCMDD(command + '*LIBL': dest0100: 'DEST0100': rcvVar: 'CMDD0100': errCode);
   if (errCode.bytAvl > 0);
     MemMgr_dealloc(pCmdd0100: 'pCmdd0100');
-    return *off;
+    return '';
   endif;
 
-  // The CDML is returned in UTF-8: <Parm Kwd="CVTCCSID" ...>
+  // The CDML is returned in UTF-8: <Parm Kwd="CVTCCSID" ...> ... </Parm>
   pCdml = pCmdd0100 + %size(cmdd0100);
   cdmlLen = apiinfo.bytAvl - %size(cmdd0100);
   if (cmdd0100.bytRet < cdmlLen);
     cdmlLen = cmdd0100.bytRet;
   endif;
-  isParm = (%scan(kwdCvtCcsid: %subst(cdml: 1: cdmlLen)) > 0);
+
+  parmStart = '<Parm Kwd="' + %trim(kwd) + '"';
+  start = %scan(parmStart: %subst(cdml: 1: cdmlLen));
+  if (start > 0);
+    end = %scan(parmEnd: %subst(cdml: 1: cdmlLen): start);
+    if (end = 0);
+      len = cdmlLen - start + 1;
+    else;
+      len = end + %len(parmEnd) - start;
+    endif;
+    if (len > MAX_PARM_CDML);
+      len = MAX_PARM_CDML;
+    endif;
+    parmCdml = %subst(cdml: start: len);
+  endif;
 
   MemMgr_dealloc(pCmdd0100: 'pCmdd0100');
 
-  return isParm;
+  return parmCdml;
 
 end-proc;
 

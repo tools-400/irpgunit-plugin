@@ -114,9 +114,18 @@ Debugging views (DBGVIEW) - Help
 :p.
 Refer to the DBGVIEW parameter in CRTRPGMOD command help.
 :p.
-:HP2.Note::EHP2.For SQL source members, adding the DBGVIEW parameter
-to parameter COMPILEOPT has been discontinued starting with version
-5.1, because IBM allowed debug view *LIST starting with 7.5.
+:HP2.Note::EHP2.For SQL sources, the debug view is passed to the
+DBGVIEW parameter of CRTSQLRPGI, which passes it on to the compiler. If
+CRTSQLRPGI does not support the debug view, like *COPY and *ALL, or
+*LIST on a release without it, DBGVIEW(*NONE) is passed to CRTSQLRPGI
+and the debug view is passed to the compiler with COMPILEOPT. If
+COMPILEOPT already contains DBGVIEW, it overrides this parameter.
+:p.
+:HP2.Note::EHP2.A debug view that is passed to the compiler with
+COMPILEOPT is created from the temporary source of the precompiler in
+library QTEMP. Its source and copy views cannot be displayed in another
+job. Only the listing view (*LIST and *ALL) and the statement view can
+be used there. Specify *SOURCE for a source view of an SQL source.
 :ehelp.
 .*
 :help name='RUCRTRPG/BNDSRVPGM' WIDTH=64.
@@ -240,8 +249,12 @@ Pre-Compiler COMPILEOPT (COMPILEOPT) - Help
 :p.
 Refer to the COMPILEOPT parameter in CRTSQLRPGI command help.
 :p.
-:HP2.Note::EHP2.If COMPILEOPT does not include 'DBGVIEW', the value
-of parameter DBGVIEW is automatically added.
+:HP2.Note::EHP2.The values of the parameters DEFINE, TGTCCSID, INCDIR
+and COPTION (as OPTION) are added to COMPILEOPT, unless COMPILEOPT
+already contains these parameters. If COMPILEOPT contains DBGVIEW,
+DBGVIEW(*NONE) is passed to CRTSQLRPGI, because CRTSQLRPGI passes its
+debug view on to the compiler. Notice the restrictions of such a debug
+view, which are described at parameter DBGVIEW.
 :ehelp.
 .*
 :help name='RUCRTRPG/CMPPARM' WIDTH=64.
