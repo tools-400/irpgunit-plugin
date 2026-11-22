@@ -159,7 +159,7 @@ dcl-proc crtTst export;
     // of INCDIR, so that the directories 2-n would get lost.
     if ((srcType = MBR_SQLRPGLE or srcType = MBR_SQLCBLLE)
         and incDir.size > 1
-        and %scan(PARM_INCDIR + '(': uCase(compileOpt)) > 0);
+        and containsParm(compileOpt: PARM_INCDIR));
       sndEscapeMsgAboveCtlBdy(
          'Only one directory is allowed for INCDIR, if COMPILEOPT +
           contains INCDIR. INCDIR is passed to the SQL precompiler, +
@@ -943,16 +943,16 @@ dcl-proc getCrtRpgModCmd export;
 
     if compileOpt <> '';
       dbgCompileOpt = %trim(removequotes(compileOpt)) + ' ';
-      if (%scan( PARM_DEFINE + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_DEFINE));
         dbgCompileOpt += serializeDefines(define);
       endif;
-      if (%scan( PARM_TGTCCSID + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_TGTCCSID));
         dbgCompileOpt += serializeTgtCcsid(tgtCcsid);
       endif;
-      if (%scan( PARM_INCDIR + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_INCDIR));
         dbgCompileOpt += serializeIncDir(incDir);
       endif;
-      if (%scan( PARM_OPTION + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_OPTION));
         dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
       endif;
       else;
@@ -1066,16 +1066,16 @@ dcl-proc getCrtCblModCmd export;
 
     if compileOpt <> '';
       dbgCompileOpt = %trim(removequotes(compileOpt)) + ' ';
-      if (%scan( PARM_DEFINE + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_DEFINE));
         dbgCompileOpt += serializeDefines(define);
       endif;
-      if (%scan( PARM_TGTCCSID + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_TGTCCSID));
         dbgCompileOpt += serializeTgtCcsid(tgtCcsid);
       endif;
-      if (%scan( PARM_INCDIR + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_INCDIR));
         dbgCompileOpt += serializeIncDir(incDir);
       endif;
-      if (%scan( PARM_OPTION + '(' : uCase( compileOpt )) = 0);
+      if (not containsParm(compileOpt: PARM_OPTION));
         dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
       endif;
     else;
@@ -1349,6 +1349,22 @@ dcl-proc serializeIncDir;
   endif;
 
   return serialized;
+
+end-proc;
+
+
+///
+// Returns *on, if the compile options contain the given parameter
+// keyword followed by an opening parenthesis, e.g. 'INCDIR('.
+// Upper and lower case are not distinguished.
+///
+dcl-proc containsParm;
+  dcl-pi *n ind extproc(*dclcase);
+    compileOpt like(compileOpt_t) const;
+    parm       varchar(10) const;
+  end-pi;
+
+  return %scan(uCase(parm) + '(': uCase(compileOpt)) > 0;
 
 end-proc;
 

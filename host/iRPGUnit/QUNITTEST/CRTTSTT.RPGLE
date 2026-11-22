@@ -1366,6 +1366,105 @@ end-proc;
 
 
 //----------------------------------------------------------------------
+// DEFINE() of COMPILEOPT overrides DEFINE.
+//----------------------------------------------------------------------
+dcl-proc testDefineInCompileOptSqlRpgle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds oneDefine likeds(defines_t) inz;
+
+  oneDefine.size = 1;
+  oneDefine.define(1) = 'FROM_PARM';
+
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 noCOption:
+                                 noDbgView:
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 'DEFINE(FROM_OPT)':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 oneDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''DEFINE(FROM_OPT) TGTCCSID(*JOB)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+dcl-proc testDefineInCompileOptSqlCblle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  dcl-ds oneDefine likeds(defines_t) inz;
+
+  oneDefine.size = 1;
+  oneDefine.define(1) = 'FROM_PARM';
+
+  crtCblModCmd = getCrtCblModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLCBLLE:
+                                 noCOption:
+                                 noDbgView:
+                                 noPOption:
+                                 'DEFINE(FROM_OPT)':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 oneDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLCBLI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLCBLLE + ''') +
+          OBJTYPE(*MODULE) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''DEFINE(FROM_OPT) TGTCCSID(*JOB)'') ': crtCblModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
+// The parameters of COMPILEOPT are recognized in lower case too.
+//----------------------------------------------------------------------
+dcl-proc testLowerCaseCompileOptSqlRpgle export;
+  dcl-pi *n extproc(*dclcase);
+  end-pi;
+
+  crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
+                                 noSrcFile:
+                                 noSrcMbr:
+                                 STMF_SQLRPGLE:
+                                 noCOption:
+                                 noDbgView:
+                                 rpgPpOptLvl2:
+                                 noPOption:
+                                 'tgtccsid(*src)':
+                                 noCompilerParams:
+                                 noTargetRls:
+                                 noDefine:
+                                 noIncDir:
+                                 -1:  // -1 = *JOB
+                                 noCvtCcsid);
+  aEqual('CRTSQLRPGI OBJ(*CURLIB/SYSTYPES) +
+          SRCSTMF(''' + STMF_SQLRPGLE + ''') +
+          OBJTYPE(*MODULE) RPGPPOPT(*LVL2) +
+          CVTCCSID(*JOB) +
+          COMPILEOPT(''tgtccsid(*src)'') ': crtRpgModCmd);
+
+end-proc;
+
+
+//----------------------------------------------------------------------
 // COPTION(*EVENTF) does not work with SRCMBR(*TSTPGM) in RDi and
 // must be rejected.
 //----------------------------------------------------------------------
