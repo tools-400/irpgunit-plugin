@@ -891,11 +891,13 @@ dcl-proc getCrtRpgModCmd export;
     cmd = 'CRTRPGMOD MODULE(' + serializeObjectName( testPgm ) + ') ';
     if (isStmf(srcStmf));
       cmd += 'SRCSTMF(' + serializeStmfPath( srcStmf ) + ') ';
-      cmd += serializeIncDir(incDir);
     else;
       cmd += 'SRCFILE(' + serializeObjectName( srcFile ) + ') ';
       cmd += serializeValue( 'SRCMBR' : srcMbr );
     endif;
+    // Also for a source member: CRTRPGMOD searches INCDIR for /COPY
+    // files in the IFS, that are not found in the QSYS file system.
+    cmd += serializeIncDir(incDir);
     cmd += serializeOptions( 'OPTION' : cOption );
     cmd += serializeValue( 'TGTRLS' : targetRls );
     cmd += serializeValue( 'DBGVIEW' : dbgView );

@@ -231,7 +231,7 @@ dcl-proc testSrcStmfRpgle export;
 end-proc;
 
 
-dcl-proc testSrcSrcMbrIncDirIgnored export;
+dcl-proc testSrcMbrRpgleIncDir export;
   dcl-pi *n extproc(*dclcase);
   end-pi;
 
@@ -241,8 +241,9 @@ dcl-proc testSrcSrcMbrIncDirIgnored export;
   incDir.size = 1;
   incDir.path(1) = '/home/dev/dir1';
 
-  // INCDIR is not added, because it is not relevant
-  // if the object is compiled from a source member.
+  // INCDIR is added for a source member too, because CRTRPGMOD
+  // searches it for /COPY files in the IFS, that are not found
+  // in the QSYS file system.
   crtRpgModCmd = getCrtRpgModCmd('SYSTYPES  *CURLIB   ':
                                  'QRPGLESRC QSYSINC   ':
                                  'SYSTYPES':
@@ -259,7 +260,8 @@ dcl-proc testSrcSrcMbrIncDirIgnored export;
                                  noTgtCcsid:
                                  noCvtCcsid);
   aEqual('CRTRPGMOD MODULE(*CURLIB/SYSTYPES) +
-          SRCFILE(QSYSINC/QRPGLESRC) SRCMBR(SYSTYPES) ': crtRpgModCmd);
+          SRCFILE(QSYSINC/QRPGLESRC) SRCMBR(SYSTYPES) +
+          INCDIR(''/home/dev/dir1'') ': crtRpgModCmd);
 
 end-proc;
 
