@@ -875,7 +875,6 @@ dcl-proc getCrtRpgModCmd export;
 
   // Command string accumulator.
   dcl-s cmd like(cmd_t);
-  dcl-s dbgCompileOpt like(compileOpt);
   dcl-s srcType char(10);
 
   if (isStmf(srcStmf));
@@ -941,28 +940,7 @@ dcl-proc getCrtRpgModCmd export;
       cmd += serializeValue( 'RPGPPOPT' : pRpgPpOpt);
     endif;
 
-    if compileOpt <> '';
-      dbgCompileOpt = %trim(removequotes(compileOpt)) + ' ';
-      if (not containsParm(compileOpt: PARM_DEFINE));
-        dbgCompileOpt += serializeDefines(define);
-      endif;
-      if (not containsParm(compileOpt: PARM_TGTCCSID));
-        dbgCompileOpt += serializeTgtCcsid(tgtCcsid);
-      endif;
-      if (not containsParm(compileOpt: PARM_INCDIR));
-        dbgCompileOpt += serializeIncDir(incDir);
-      endif;
-      if (not containsParm(compileOpt: PARM_OPTION));
-        dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
-      endif;
-      else;
-        dbgCompileOpt = serializeDefines(define);
-        dbgCompileOpt += serializeTgtCcsid(tgtCcsid);
-        dbgCompileOpt += serializeIncDir(incDir);
-        dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
-    endif;
-
-    cmd += serializeString( 'COMPILEOPT' : dbgCompileOpt);
+    cmd += serializeCompileOpt(compileOpt: define: tgtCcsid: incDir: cOption);
 
     // append arbitrary compile parameters
     cmd += serializeArbitraryParams(compilerParams);
@@ -999,7 +977,6 @@ dcl-proc getCrtCblModCmd export;
 
   // Command string accumulator.
   dcl-s cmd like(cmd_t);
-  dcl-s dbgCompileOpt like(compileOpt);
   dcl-s srcType char(10);
 
   if (isStmf(srcStmf));
@@ -1064,28 +1041,7 @@ dcl-proc getCrtCblModCmd export;
       endif;
     endif;
 
-    if compileOpt <> '';
-      dbgCompileOpt = %trim(removequotes(compileOpt)) + ' ';
-      if (not containsParm(compileOpt: PARM_DEFINE));
-        dbgCompileOpt += serializeDefines(define);
-      endif;
-      if (not containsParm(compileOpt: PARM_TGTCCSID));
-        dbgCompileOpt += serializeTgtCcsid(tgtCcsid);
-      endif;
-      if (not containsParm(compileOpt: PARM_INCDIR));
-        dbgCompileOpt += serializeIncDir(incDir);
-      endif;
-      if (not containsParm(compileOpt: PARM_OPTION));
-        dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
-      endif;
-    else;
-      dbgCompileOpt = serializeDefines(define);
-      dbgCompileOpt += serializeTgtCcsid(tgtCcsid);
-      dbgCompileOpt += serializeIncDir(incDir);
-      dbgCompileOpt += serializeOptions( 'OPTION' : cOption );
-    endif;
-
-    cmd += serializeString( 'COMPILEOPT' : dbgCompileOpt);
+    cmd += serializeCompileOpt(compileOpt: define: tgtCcsid: incDir: cOption);
 
     // append arbitrary compile parameters
     cmd += serializeArbitraryParams(compilerParams);
@@ -1365,6 +1321,44 @@ dcl-proc containsParm;
   end-pi;
 
   return %scan(uCase(parm) + '(': uCase(compileOpt)) > 0;
+
+end-proc;
+
+
+///
+// Returns parameter COMPILEOPT of CRTSQLRPGI and CRTSQLCBLI. DEFINE,
+// TGTCCSID, INCDIR and OPTION are added, unless the compile options
+// of the user already contain them.
+///
+dcl-proc serializeCompileOpt;
+  dcl-pi *n like(serializedString_t) extproc(*dclcase);
+    compileOpt like(compileOpt_t) const;
+    define     likeds(defines_t) const;
+    tgtCcsid   like(tgtCcsid_t) const;
+    incDir     likeds(incDir_t) const;
+    cOption    likeds(options_t) const;
+  end-pi;
+
+  // Compile options passed to the compiler.
+  dcl-s compilerOpts like(compileOpt_t);
+
+  if (compileOpt <> '');
+    compilerOpts = %trim(removequotes(compileOpt)) + ' ';
+  endif;
+  if (not containsParm(compileOpt: PARM_DEFINE));
+    compilerOpts += serializeDefines(define);
+  endif;
+  if (not containsParm(compileOpt: PARM_TGTCCSID));
+    compilerOpts += serializeTgtCcsid(tgtCcsid);
+  endif;
+  if (not containsParm(compileOpt: PARM_INCDIR));
+    compilerOpts += serializeIncDir(incDir);
+  endif;
+  if (not containsParm(compileOpt: PARM_OPTION));
+    compilerOpts += serializeOptions( 'OPTION' : cOption );
+  endif;
+
+  return serializeString( 'COMPILEOPT' : compilerOpts);
 
 end-proc;
 
