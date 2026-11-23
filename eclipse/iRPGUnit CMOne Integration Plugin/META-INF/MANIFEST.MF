@@ -15,5 +15,5 @@ Require-Bundle: org.eclipse.ui,
  de.taskforce.cmoneng,
  de.tools400.rpgunit.core
 Bundle-ActivationPolicy: lazy
-Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-Localization: plugin
